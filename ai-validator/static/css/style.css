@@ -259,6 +259,9 @@
   .wazuh-alert-item:last-child { border-bottom: none; }
   .alert-rule { color: var(--accent); font-size: 11px; }
   .alert-meta { color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .alert-source { font-size: 10px; padding: 5px 14px; font-family: 'JetBrains Mono', monospace; }
+  .source-live { color: var(--green); }
+  .source-fallback { color: var(--yellow); }
   
   /* Right panel */
   .right-panel {

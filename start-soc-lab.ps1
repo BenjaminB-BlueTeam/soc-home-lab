@@ -14,6 +14,34 @@ $VALIDATOR_PATH = "$ROOT\ai-validator"
 
 # ── Read config ─────────────────────────────────────────────
 
+function Find-Python {
+    $candidates = @(
+        "$env:LOCALAPPDATA\Python\bin\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
+        "C:\Python314\python.exe",
+        "C:\Python313\python.exe",
+        "python"
+    )
+    foreach ($p in $candidates) {
+        try {
+            $v = & $p --version 2>&1
+            if ("$v" -match "Python 3") { return $p }
+        } catch {}
+    }
+    return "python"
+}
+
+function Test-WazuhReady($ip) {
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $tcp.Connect($ip, 55000)
+        $tcp.Close()
+        return $true
+    } catch { return $false }
+}
+
 function Read-Config {
     $cfg = @{}
     if (Test-Path $CONFIG_FILE) {
@@ -86,12 +114,26 @@ if ($wazuhRunning) {
 } else {
     Show-Progress 15 "Starting Wazuh SIEM (headless)..." "Launching VM in background"
     & $VBOX startvm $WAZUH_VM --type headless 2>$null
-    $bootTime = 45
+    # Initial wait — services need time to start
+    $bootTime = 90
     for ($i = 1; $i -le $bootTime; $i++) {
-        $pct = 15 + [math]::Round(35 * $i / $bootTime)
+        $pct = 15 + [math]::Round(25 * $i / $bootTime)
         Show-Progress $pct "Wazuh SIEM booting... ($i/$bootTime sec)" "Starting indexer, manager and dashboard"
         Start-Sleep 1
     }
+    # Poll API until ready (up to 90s extra)
+    Show-Progress 42 "Waiting for Wazuh API on port 55000..." "Checking every 5 seconds"
+    for ($t = 0; $t -lt 90; $t += 5) {
+        if (Test-WazuhReady $WAZUH_IP) { break }
+        Show-Progress 42 "Waiting for Wazuh API... ($t/90s)" "Port 55000 not yet open — services still starting"
+        Start-Sleep 5
+    }
+    if (Test-WazuhReady $WAZUH_IP) {
+        Show-Progress 50 "Wazuh API ready!" "Port 55000 is responding"
+    } else {
+        Show-Progress 50 "Wazuh API not responding yet" "You may need to restart wazuh-manager inside the VM"
+    }
+    Start-Sleep 1
 }
 
 # Step 4 - Start Kali
@@ -112,8 +154,9 @@ if ($kaliRunning) {
 # Step 5 - Start Validator
 Show-Progress 75 "Starting AI Validator..." "Launching Flask server"
 $env:ANTHROPIC_API_KEY = $cfg.anthropic_api_key
+$PYTHON = Find-Python
 Set-Location $VALIDATOR_PATH
-Start-Process -FilePath "python" -ArgumentList "app.py" -WindowStyle Minimized
+Start-Process -FilePath $PYTHON -ArgumentList "app.py" -WindowStyle Minimized
 
 for ($i = 1; $i -le 5; $i++) {
     $pct = 75 + [math]::Round(15 * $i / 5)

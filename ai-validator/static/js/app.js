@@ -39,7 +39,11 @@ async function importFromWazuh() {
       return;
     }
 
-    list.innerHTML = d.alerts.map(a => `
+    const sourceLabel = d.source === 'opensearch'
+      ? '<div class="alert-source source-live">● OpenSearch — real alerts</div>'
+      : '<div class="alert-source source-fallback">⚠ Fallback: manager logs (no SSH tunnel)</div>';
+
+    list.innerHTML = sourceLabel + d.alerts.map(a => `
       <div class="wazuh-alert-item" onclick='fillFromAlert(${JSON.stringify(a)})'>
         <div class="alert-rule">${a.rule?.description || 'Unknown rule'}</div>
         <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${a.rule?.level || '?'} • ${(a.timestamp || '').substring(0,19)}</div>

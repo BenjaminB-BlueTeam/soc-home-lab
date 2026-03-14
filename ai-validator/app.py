@@ -1,21 +1,52 @@
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
-import anthropic
 import requests
 import json
 import os
 import urllib3
 from datetime import datetime
+from sshtunnel import SSHTunnelForwarder
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
 
 app = Flask(__name__)
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# ── AI provider (claude | openai) ─────────────────────────────
+AI_PROVIDER = os.getenv("AI_PROVIDER", "claude")
+
+if AI_PROVIDER == "openai":
+    from openai import OpenAI
+    ai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    AI_MODEL  = os.getenv("OPENAI_MODEL", "gpt-4o")
+else:
+    import anthropic
+    ai_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    AI_MODEL  = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+
+def call_ai(prompt: str) -> str:
+    if AI_PROVIDER == "openai":
+        resp = ai_client.chat.completions.create(
+            model=AI_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1500,
+        )
+        return resp.choices[0].message.content
+    else:
+        msg = ai_client.messages.create(
+            model=AI_MODEL,
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return msg.content[0].text
+
 WAZUH_HOST = os.getenv("WAZUH_HOST", "192.168.56.101")
-WAZUH_USER = os.getenv("WAZUH_USER", "admin")
-WAZUH_PASSWORD = os.getenv("WAZUH_PASSWORD", "admin")
+WAZUH_USER = os.getenv("WAZUH_USER", "wazuh")
+WAZUH_PASSWORD = os.getenv("WAZUH_PASSWORD", "wazuh")
+WAZUH_SSH_USER = os.getenv("WAZUH_SSH_USER", "wazuh-user")
+WAZUH_SSH_PASSWORD = os.getenv("WAZUH_SSH_PASSWORD", "wazuh")
+WAZUH_INDEXER_USER = os.getenv("WAZUH_INDEXER_USER", "admin")
+WAZUH_INDEXER_PASSWORD = os.getenv("WAZUH_INDEXER_PASSWORD", "WazuhLab123*")
 
 HISTORY_FILE = "reports_history.json"
 
@@ -145,6 +176,51 @@ Severity: Critical
 [ ] Close - false positive"""
 }
 
+def get_wazuh_real_alerts(limit=20):
+    """Query real security alerts from OpenSearch via SSH tunnel on port 9200."""
+    try:
+        with SSHTunnelForwarder(
+            (WAZUH_HOST, 22),
+            ssh_username=WAZUH_SSH_USER,
+            ssh_password=WAZUH_SSH_PASSWORD,
+            remote_bind_address=("127.0.0.1", 9200),
+        ) as tunnel:
+            url = f"https://127.0.0.1:{tunnel.local_bind_port}/wazuh-alerts-*/_search"
+            resp = requests.post(
+                url,
+                auth=(WAZUH_INDEXER_USER, WAZUH_INDEXER_PASSWORD),
+                json={
+                    "size": limit,
+                    "sort": [{"timestamp": {"order": "desc"}}],
+                    "query": {"match_all": {}},
+                },
+                verify=False,
+                timeout=10,
+            )
+
+            if resp.status_code != 200:
+                print(f"[DEBUG] OpenSearch returned {resp.status_code}: {resp.text[:200]}")
+                return None
+
+            hits = resp.json().get("hits", {}).get("hits", [])
+            alerts = []
+            for hit in hits:
+                src = hit.get("_source", {})
+                alerts.append({
+                    "id": src.get("id", hit.get("_id", "")),
+                    "timestamp": src.get("timestamp", ""),
+                    "rule": src.get("rule", {}),
+                    "agent": src.get("agent", {}),
+                    "data": src.get("data", {}),
+                    "full_log": src.get("full_log", ""),
+                })
+            return alerts
+
+    except Exception as e:
+        print(f"[DEBUG] SSH tunnel error: {e}")
+        return None
+
+
 def get_wazuh_alerts(limit=20):
     try:
         port = os.getenv("WAZUH_PORT", "55000")
@@ -224,8 +300,12 @@ def get_template(attack_type):
 
 @app.route("/api/wazuh/alerts")
 def wazuh_alerts():
+    alerts = get_wazuh_real_alerts()
+    if alerts is not None:
+        return jsonify({"alerts": alerts, "source": "opensearch"})
+    # Fallback to manager logs if SSH tunnel fails
     alerts = get_wazuh_alerts()
-    return jsonify({"alerts": alerts})
+    return jsonify({"alerts": alerts, "source": "manager_logs"})
 
 @app.route("/api/validate", methods=["POST"])
 def validate():
@@ -269,13 +349,7 @@ Be precise, educational and constructive. This is for training.
 {report}
 --- END ---"""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1500,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    feedback = message.content[0].text
+    feedback = call_ai(prompt)
 
     score_line = [l for l in feedback.split("\n") if "**SCORE**" in l]
     score = 0
@@ -306,6 +380,10 @@ Be precise, educational and constructive. This is for training.
         "verdict": verdict,
         "history_entry": entry
     })
+
+@app.route("/api/info")
+def info():
+    return jsonify({"provider": AI_PROVIDER, "model": AI_MODEL})
 
 @app.route("/api/history")
 def history():

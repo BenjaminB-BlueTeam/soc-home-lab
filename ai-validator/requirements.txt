@@ -1,0 +1,8 @@
+flask
+anthropic
+openai
+python-dotenv
+requests
+urllib3
+sshtunnel
+paramiko<4

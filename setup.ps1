@@ -50,6 +50,46 @@ function Find-KaliVM {
     return ($vms | Where-Object { $_ -match "kali" } | Select-Object -First 1)
 }
 
+function Get-HostOnlyAdapter {
+    $raw = & $VBOX_DEFAULT list hostonlyifs 2>$null
+    $names = $raw | Select-String "^Name:" | ForEach-Object { ($_ -split ":\s+", 2)[1].Trim() }
+    if (-not $names) {
+        & $VBOX_DEFAULT hostonlyif create 2>$null | Out-Null
+        $raw = & $VBOX_DEFAULT list hostonlyifs 2>$null
+        $names = $raw | Select-String "^Name:" | ForEach-Object { ($_ -split ":\s+", 2)[1].Trim() }
+    }
+    return ($names | Select-Object -First 1)
+}
+
+function Get-BridgeAdapter {
+    $raw = & $VBOX_DEFAULT list bridgedifs 2>$null
+    $lines = $raw -split "`n"
+    $name = ""; $status = ""
+    foreach ($line in $lines) {
+        if ($line -match "^Name:\s+(.+)")   { $name   = $matches[1].Trim() }
+        if ($line -match "^Status:\s+(.+)") { $status = $matches[1].Trim()
+            if ($status -eq "Up" -and $name) { return $name }
+        }
+    }
+    return $name
+}
+
+function Configure-VMs($wazuhVM, $kaliVM) {
+    $running  = & $VBOX_DEFAULT list runningvms 2>$null
+    $hostOnly = Get-HostOnlyAdapter
+    $bridge   = Get-BridgeAdapter
+
+    if ($wazuhVM -and -not ($running -match [regex]::Escape($wazuhVM))) {
+        & $VBOX_DEFAULT modifyvm $wazuhVM --graphicscontroller vmsvga 2>$null
+        if ($bridge)   { & $VBOX_DEFAULT modifyvm $wazuhVM --nic1 bridged  --bridgeadapter1  $bridge   2>$null }
+        if ($hostOnly) { & $VBOX_DEFAULT modifyvm $wazuhVM --nic2 hostonly --hostonlyadapter2 $hostOnly 2>$null }
+    }
+    if ($kaliVM -and -not ($running -match [regex]::Escape($kaliVM))) {
+        if ($hostOnly) { & $VBOX_DEFAULT modifyvm $kaliVM --nic1 hostonly --hostonlyadapter1 $hostOnly 2>$null }
+        & $VBOX_DEFAULT modifyvm $kaliVM --nic2 nat 2>$null
+    }
+}
+
 # ── Colors ───────────────────────────────────────────────────
 
 $BG       = [System.Drawing.Color]::FromArgb(10, 14, 26)
@@ -310,7 +350,7 @@ function Show-Progress($percent, $msg, $detail = "") {
 $choices = Show-SetupWindow
 
 $step = 0
-$total = 5 +
+$total = 6 +
     [int]$choices.installPython +
     [int]$choices.installVBox +
     [int]$choices.installWazuh +
@@ -367,6 +407,14 @@ if ($choices.installKali) {
     $choices.kaliVM = Find-KaliVM
 }
 
+# Step: Configure VM network + VMSVGA
+$step++
+Show-Progress ([math]::Round($step/$total*80)) "Configuring VM network adapters..." "host-only + bridge + VMSVGA"
+if ($choices.wazuhVM -or $choices.kaliVM) {
+    Configure-VMs $choices.wazuhVM $choices.kaliVM
+}
+Start-Sleep 1
+
 # Step: Save config
 $step++
 Show-Progress ([math]::Round($step/$total*80)) "Saving configuration..." ""
@@ -393,19 +441,15 @@ $cfgLines | Set-Content $CONFIG_FILE -Encoding UTF8
 $envLines = @(
     "ANTHROPIC_API_KEY=$($choices.apiKey)",
     "WAZUH_HOST=$wazuhIP",
-    "WAZUH_USER=admin",
-    "WAZUH_PASSWORD=admin"
+    "WAZUH_PORT=55000",
+    "WAZUH_USER=wazuh",
+    "WAZUH_PASSWORD=wazuh",
+    "WAZUH_SSH_USER=wazuh-user",
+    "WAZUH_SSH_PASSWORD=wazuh",
+    "WAZUH_INDEXER_USER=admin",
+    "WAZUH_INDEXER_PASSWORD=WazuhLab123*"
 )
 $envLines | Set-Content "$VALIDATOR_DIR\.env" -Encoding UTF8
-
-# Step: Create .env.example
-$envExample = @(
-    "ANTHROPIC_API_KEY=sk-ant-your-key-here",
-    "WAZUH_HOST=192.168.56.101",
-    "WAZUH_USER=admin",
-    "WAZUH_PASSWORD=admin"
-)
-$envExample | Set-Content "$ROOT\ai-validator\.env.example" -Encoding UTF8
 
 # Done
 Show-Progress 100 "Setup complete!" "All components are ready"
