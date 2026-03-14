@@ -1,0 +1,58 @@
+[
+  {
+    "id": "WZ-20260314-140050",
+    "date": "2026-03-14 14:00",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 94,
+    "report": "Alert ID: WZ-20260314-001\nDate/Time: 2026-03-14 10:59:00\nSource IP: 192.168.56.102 (Kali)\nDestination IP: 192.168.56.101 (Wazuh Server)\nRule triggered: Wazuh Rule 40101 - Port Scan Detected\nSeverity: ..."
+  },
+  {
+    "id": "WZ-20260314-135937",
+    "date": "2026-03-14 13:59",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 94,
+    "report": "Alert ID: WZ-20260314-001\nDate/Time: 2026-03-14 10:59:00\nSource IP: 192.168.56.102 (Kali)\nDestination IP: 192.168.56.101 (Wazuh Server)\nRule triggered: Wazuh Rule 40101 - Port Scan Detected\nSeverity: ..."
+  },
+  {
+    "id": "WZ-20260314-135634",
+    "date": "2026-03-14 13:56",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 94,
+    "report": "Alert ID: WZ-20260314-001\nDate/Time: 2026-03-14 10:59:00\nSource IP: 192.168.56.102 (Kali)\nDestination IP: 192.168.56.101 (Wazuh Server)\nRule triggered: Wazuh Rule 40101 - Port Scan Detected\nSeverity: ..."
+  },
+  {
+    "id": "WZ-20260314-135400",
+    "date": "2026-03-14 13:54",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 94,
+    "report": "Alert ID: WZ-20260314-001\nDate/Time: 2026-03-14 10:59:00\nSource IP: 192.168.56.102 (Kali)\nDestination IP: 192.168.56.101 (Wazuh Server)\nRule triggered: Wazuh Rule 40101 - Port Scan Detected\nSeverity: ..."
+  },
+  {
+    "id": "WZ-20260314-135317",
+    "date": "2026-03-14 13:53",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 94,
+    "report": "Alert ID: WZ-20260314-001\nDate/Time: 2026-03-14 10:59:00\nSource IP: 192.168.56.102 (Kali)\nDestination IP: 192.168.56.101 (Wazuh Server)\nRule triggered: Wazuh Rule 40101 - Port Scan Detected\nSeverity: ..."
+  },
+  {
+    "id": "WZ-20260314-134935",
+    "date": "2026-03-14 13:49",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 38,
+    "report": "Alert ID : WZ-20260314-001\nDate/Time : 2026-03-14 10:59:00\nSource IP : 192.168.56.102 (Kali)\nDestination IP : 192.168.56.101 (Wazuh)\nPorts scanned : 22, 443\nScan type : SYN (-sS)\n"
+  },
+  {
+    "id": "WZ-20260314-134442",
+    "date": "2026-03-14 13:44",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 38,
+    "report": "Alert ID : WZ-20260314-001\nDate/Time : 2026-03-14 10:59:00\nSource IP : 192.168.56.102 (Kali)\nDestination IP : 192.168.56.101 (Wazuh)\nPorts scanned : 22, 443\nScan type : SYN (-sS)"
+  }
+]

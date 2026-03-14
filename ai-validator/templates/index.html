@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOC Home Lab — AI Validator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    SOC Home Lab
+  </div>
+  <div class="status-bar">
+    <span><span class="status-dot"></span>Wazuh 192.168.56.101</span>
+    <span class="version">AI Validator v1.0</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Left panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Investigation Report</span>
+      <button class="btn-secondary small" onclick="importFromWazuh()">⬇ Import from Wazuh</button>
+    </div>
+    <div class="panel-body">
+
+      <div class="form-group">
+        <label>Attack Type</label>
+        <div class="attack-selector">
+          <button class="attack-btn active" data-type="port_scan" onclick="selectAttack(this)">Port Scan</button>
+          <button class="attack-btn" data-type="ssh_brute_force" onclick="selectAttack(this)">SSH Brute Force</button>
+          <button class="attack-btn" data-type="privilege_escalation" onclick="selectAttack(this)">Priv. Escalation</button>
+          <button class="attack-btn" data-type="malware_detection" onclick="selectAttack(this)">Malware</button>
+        </div>
+      </div>
+
+      <div class="form-group" id="wazuh-alerts-section" style="display:none;">
+        <label>Recent Wazuh Alerts</label>
+        <div class="wazuh-alerts" id="wazuh-alerts-list"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Severity</label>
+        <div class="severity-selector">
+          <button class="sev-btn" data-sev="low" onclick="selectSev(this)">Low</button>
+          <button class="sev-btn active" data-sev="medium" onclick="selectSev(this)">Medium</button>
+          <button class="sev-btn" data-sev="high" onclick="selectSev(this)">High</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Your Investigation Report</label>
+        <textarea id="report-input" placeholder="Select an attack type above to load the template..."></textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" onclick="analyzeReport()" id="analyze-btn">
+          🔍 ANALYZE WITH AI
+        </button>
+        <button class="btn-secondary" onclick="clearReport()">Clear</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('feedback')">AI Feedback</div>
+      <div class="tab" onclick="switchTab('history')">History</div>
+    </div>
+
+    <div class="tab-content active" id="tab-feedback">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Analyzing your report...</div>
+      </div>
+      <div id="feedback-empty" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-text">Submit a report to get AI feedback</div>
+      </div>
+      <div id="feedback-result" style="display:none;">
+        <div class="score-display">
+          <div class="score-ring">
+            <div>
+              <div class="score-number" id="score-number">--</div>
+              <div class="score-max">/100</div>
+            </div>
+          </div>
+          <div id="verdict-badge"></div>
+          <div class="confidence-text" id="confidence-text"></div>
+        </div>
+        <div id="feedback-sections"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-history">
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
