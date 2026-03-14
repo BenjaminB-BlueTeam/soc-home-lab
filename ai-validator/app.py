@@ -147,6 +147,69 @@ Severity: High
 [ ] Review sudo rules
 [ ] Close - authorized action""",
 
+    "data_exfiltration": """Alert ID: [WZ-XXXX]
+Date/Time: [YYYY-MM-DD HH:MM:SS]
+Source host: [hostname]
+Destination IP: [X.X.X.X]
+Rule triggered: Possible data exfiltration detected
+Severity: High
+MITRE ATT&CK: T1048 — Exfiltration Over Alternative Protocol
+
+## What I observed
+[Describe the transfer: tool used (curl/nc/scp/dns), volume, destination, timing...]
+
+## IOCs identified
+- Source host: [hostname]
+- Destination IP/domain: [X.X.X.X or domain]
+- Protocol/tool: [curl / netcat / scp / DNS tunnel...]
+- Data volume: [X MB/KB]
+- Process: [process name and PID]
+- Port used: [port]
+
+## My verdict
+[ ] True Positive  [ ] False Positive
+
+## Justification
+[Is this destination known? Is this transfer expected? Is the volume abnormal? Is the process legitimate?]
+
+## Recommended action
+[ ] Block destination IP immediately
+[ ] Isolate source host
+[ ] Collect forensic evidence (pcap, process tree)
+[ ] Escalate to IR team
+[ ] Close - authorized transfer""",
+
+    "persistence_cron": """Alert ID: [WZ-XXXX]
+Date/Time: [YYYY-MM-DD HH:MM:SS]
+Affected host: [hostname]
+User: [username]
+Rule triggered: Suspicious crontab modification detected
+Severity: High
+MITRE ATT&CK: T1053.003 — Scheduled Task/Job: Cron
+
+## What I observed
+[Describe the cron entry: file modified, command scheduled, frequency, who modified it...]
+
+## IOCs identified
+- Cron file modified: [/etc/cron.d/... or crontab -e]
+- Scheduled command: [the actual command or script]
+- Frequency: [* * * * * / timing]
+- User who modified: [username]
+- Command purpose: [reverse shell / download / beacon / unknown]
+
+## My verdict
+[ ] True Positive  [ ] False Positive
+
+## Justification
+[Is this cron entry expected? Does the command look malicious (curl|bash, /tmp/, base64...)? Is the user authorized?]
+
+## Recommended action
+[ ] Remove malicious cron entry immediately
+[ ] Check for other persistence mechanisms
+[ ] Audit all crontabs on the host
+[ ] Escalate — possible full compromise
+[ ] Close - authorized scheduled task""",
+
     "malware_detection": """Alert ID: [WZ-XXXX]
 Date/Time: [YYYY-MM-DD HH:MM:SS]
 Affected host: [hostname]
