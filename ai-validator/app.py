@@ -147,20 +147,58 @@ Severity: Critical
 
 def get_wazuh_alerts(limit=20):
     try:
-        auth_url = f"https://{WAZUH_HOST}/security/user/authenticate"
+        port = os.getenv("WAZUH_PORT", "55000")
+        base = f"https://{WAZUH_HOST}:{port}"
+
         auth_resp = requests.post(
-            auth_url,
+            f"{base}/security/user/authenticate",
             auth=(WAZUH_USER, WAZUH_PASSWORD),
             verify=False,
             timeout=5
         )
+
+        if auth_resp.status_code != 200:
+            return []
+
         token = auth_resp.json()["data"]["token"]
         headers = {"Authorization": f"Bearer {token}"}
-        alerts_url = f"https://{WAZUH_HOST}/alerts"
-        params = {"limit": limit, "sort": "-timestamp"}
-        resp = requests.get(alerts_url, headers=headers, params=params, verify=False, timeout=5)
-        return resp.json().get("data", {}).get("affected_items", [])
+
+        resp = requests.get(
+            f"{base}/manager/logs",
+            headers=headers,
+            params={
+                "limit": limit,
+                "sort": "-timestamp",
+                "level": "warning"
+            },
+            verify=False,
+            timeout=5
+        )
+
+        if resp.status_code != 200:
+            return []
+
+        items = resp.json().get("data", {}).get("affected_items", [])
+        
+        # Formater pour ressembler à des alertes
+        alerts = []
+        for item in items:
+            alerts.append({
+                "id": item.get("timestamp", ""),
+                "timestamp": item.get("timestamp", ""),
+                "rule": {
+                    "description": item.get("description", "No description"),
+                    "level": 7 if item.get("level") == "warning" else 3
+                },
+                "agent": {
+                    "name": "wazuh-server",
+                    "ip": WAZUH_HOST
+                }
+            })
+        return alerts
+
     except Exception as e:
+        print(f"[DEBUG] Error: {e}")
         return []
 
 def load_history():
