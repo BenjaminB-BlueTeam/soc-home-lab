@@ -177,7 +177,10 @@ Severity: Critical
 }
 
 def get_wazuh_real_alerts(limit=20):
-    """Query real security alerts from OpenSearch via SSH tunnel on port 9200."""
+    """Query real security alerts from OpenSearch via SSH tunnel on port 9200.
+    Only returns alerts with rule.level >= 5 to filter out PAM/SSH noise.
+    Falls back to level >= 3 if nothing found at level 5.
+    """
     try:
         with SSHTunnelForwarder(
             (WAZUH_HOST, 22),
@@ -186,14 +189,20 @@ def get_wazuh_real_alerts(limit=20):
             remote_bind_address=("127.0.0.1", 9200),
         ) as tunnel:
             url = f"https://127.0.0.1:{tunnel.local_bind_port}/wazuh-alerts-*/_search"
+
+            def query(min_level):
+                return {
+                    "size": limit,
+                    "sort": [{"timestamp": {"order": "desc"}}],
+                    "query": {
+                        "range": {"rule.level": {"gte": min_level}}
+                    },
+                }
+
             resp = requests.post(
                 url,
                 auth=(WAZUH_INDEXER_USER, WAZUH_INDEXER_PASSWORD),
-                json={
-                    "size": limit,
-                    "sort": [{"timestamp": {"order": "desc"}}],
-                    "query": {"match_all": {}},
-                },
+                json=query(5),
                 verify=False,
                 timeout=10,
             )
@@ -203,6 +212,19 @@ def get_wazuh_real_alerts(limit=20):
                 return None
 
             hits = resp.json().get("hits", {}).get("hits", [])
+
+            # Fallback to level >= 3 if no significant alerts found
+            if not hits:
+                resp2 = requests.post(
+                    url,
+                    auth=(WAZUH_INDEXER_USER, WAZUH_INDEXER_PASSWORD),
+                    json=query(3),
+                    verify=False,
+                    timeout=10,
+                )
+                if resp2.status_code == 200:
+                    hits = resp2.json().get("hits", {}).get("hits", [])
+
             alerts = []
             for hit in hits:
                 src = hit.get("_source", {})
