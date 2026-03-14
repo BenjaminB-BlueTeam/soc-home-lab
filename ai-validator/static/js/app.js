@@ -46,9 +46,12 @@ async function importFromWazuh() {
     list.innerHTML = sourceLabel + d.alerts.map(a => {
       const lvl = a.rule?.level || 0;
       const sev = lvl >= 12 ? 'critical' : lvl >= 8 ? 'high' : lvl >= 5 ? 'medium' : '';
+      const badge = sev
+        ? `<span class="alert-sev-badge badge-${sev}">${sev}</span>`
+        : `<span style="color:var(--muted);font-size:10px;margin-left:6px">low</span>`;
       return `
       <div class="wazuh-alert-item ${sev}" onclick='fillFromAlert(${JSON.stringify(a)})'>
-        <div class="alert-rule">${a.rule?.description || 'Unknown rule'}</div>
+        <div class="alert-rule">${a.rule?.description || 'Unknown rule'}${badge}</div>
         <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${lvl} • ${(a.timestamp || '').substring(0,19)}</div>
       </div>`
     }).join('');
