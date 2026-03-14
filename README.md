@@ -1,6 +1,6 @@
 # 🛡️ SOC Home Lab
 
-> Virtualized SOC environment with real-time intrusion detection and AI-powered investigation validation.
+> Virtualized SOC environment with real-time intrusion detection, network IDS, and AI-powered investigation validation.
 > Built on Windows 11 with VirtualBox — no cloud, no cost, runs entirely on your machine.
 
 ---
@@ -107,19 +107,21 @@ soc-home-lab/
 | Real alerts | OpenSearch via SSH tunnel | ✅ Operational |
 | AI Validator | Flask + Claude / OpenAI | ✅ Operational |
 | Hypervisor | VirtualBox | ✅ Operational |
-| Attack automation | Atomic Red Team | ⏳ Planned |
+| Attack automation | Atomic Red Team | ✅ Operational |
+| Network IDS | Suricata 7.0.13 | ✅ Operational |
 
 ---
 
 ## 🧪 Attack Scenarios
 
-| Scenario | Type | Status |
-|---|---|---|
-| Network reconnaissance | nmap port scan | ✅ Tested |
-| SSH brute force | hydra | ✅ Tested |
-| Privilege escalation | sudo abuse | ⏳ Planned |
-| Data exfiltration | curl / netcat | ⏳ Planned |
-| Persistence | malicious crontab | ⏳ Planned |
+| Scenario | MITRE ATT&CK | Detection | Status |
+|---|---|---|---|
+| Network reconnaissance | T1046 | Suricata: SCAN nmap SYN | ✅ Tested |
+| SSH brute force | T1110 | Wazuh rule 5712 (level 12) | ✅ Tested |
+| User creation | T1136.001 | Wazuh rule 5902 | ✅ Tested |
+| Data exfiltration | T1048 | Wazuh + Suricata | ✅ Tested |
+| Persistence (crontab) | T1053.003 | Wazuh rule 5903 | ✅ Tested |
+| Privilege escalation | T1548.003 | Wazuh rule 5402 | ✅ Tested |
 
 ---
 
