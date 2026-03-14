@@ -43,12 +43,15 @@ async function importFromWazuh() {
       ? '<div class="alert-source source-live">● OpenSearch — real alerts</div>'
       : '<div class="alert-source source-fallback">⚠ Fallback: manager logs (no SSH tunnel)</div>';
 
-    list.innerHTML = sourceLabel + d.alerts.map(a => `
-      <div class="wazuh-alert-item" onclick='fillFromAlert(${JSON.stringify(a)})'>
+    list.innerHTML = sourceLabel + d.alerts.map(a => {
+      const lvl = a.rule?.level || 0;
+      const sev = lvl >= 12 ? 'critical' : lvl >= 8 ? 'high' : lvl >= 5 ? 'medium' : '';
+      return `
+      <div class="wazuh-alert-item ${sev}" onclick='fillFromAlert(${JSON.stringify(a)})'>
         <div class="alert-rule">${a.rule?.description || 'Unknown rule'}</div>
-        <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${a.rule?.level || '?'} • ${(a.timestamp || '').substring(0,19)}</div>
-      </div>
-    `).join('');
+        <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${lvl} • ${(a.timestamp || '').substring(0,19)}</div>
+      </div>`
+    }).join('');
 
   } catch(e) {
     list.innerHTML = '<div class="wazuh-alert-item"><span class="alert-meta" style="color:var(--red)">Cannot connect to Wazuh</span></div>';

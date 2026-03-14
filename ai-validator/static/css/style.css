@@ -257,7 +257,13 @@
   
   .wazuh-alert-item:hover { background: rgba(0,212,255,0.05); }
   .wazuh-alert-item:last-child { border-bottom: none; }
+  .wazuh-alert-item.medium  { border-left: 2px solid rgba(245,158,11,0.5); }
+  .wazuh-alert-item.high    { border-left: 2px solid rgba(249,115,22,0.7); background: rgba(249,115,22,0.03); }
+  .wazuh-alert-item.critical{ border-left: 2px solid rgba(239,68,68,0.8);  background: rgba(239,68,68,0.05); }
   .alert-rule { color: var(--accent); font-size: 11px; }
+  .alert-rule .lvl-medium   { color: rgba(245,158,11,0.9); }
+  .alert-rule .lvl-high     { color: rgba(249,115,22,0.95); }
+  .alert-rule .lvl-critical { color: rgba(239,68,68,1); }
   .alert-meta { color: var(--muted); font-size: 10px; margin-top: 2px; }
   .alert-source { font-size: 10px; padding: 5px 14px; font-family: 'JetBrains Mono', monospace; }
   .source-live { color: var(--green); }
