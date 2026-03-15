@@ -268,15 +268,18 @@ function Show-InstallChecklist($choices) {
         $stepControls[$k].openBtn.Visible = $false; $stepControls[$k].doneBtn.Visible = $false
         [System.Windows.Forms.Application]::DoEvents()
     }
+    function Install-ViaWinget($id) {
+        Start-Process winget -ArgumentList "install --id $id --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    }
     function Step-Manual($k,$url) {
         $stepControls[$k].icon.Text = "→"; $stepControls[$k].icon.ForeColor = $ACCENT
         $stepControls[$k].status.Text = "Download & import, then click Done →"
         $stepControls[$k].status.ForeColor = $TEXT
         $stepControls[$k].openBtn.Visible = $true; $stepControls[$k].openBtn.Enabled = $true
         $stepControls[$k].doneBtn.Visible = $true
-        $script:_manualUrl  = $url
-        $script:_manualDone = $stepControls[$k].doneBtn
-        $stepControls[$k].openBtn.Add_Click({ Start-Process $script:_manualUrl; $script:_manualDone.Enabled = $true })
+        $capturedUrl = $url; $capturedBtn = $stepControls[$k].doneBtn
+        $stepControls[$k].openBtn.Add_Click({ Start-Process $capturedUrl; $capturedBtn.Enabled = $true })
         [System.Windows.Forms.Application]::DoEvents()
     }
     function Prog($n,$t) { $progBar.Width = [int]($STEP_W * $n / $t); [System.Windows.Forms.Application]::DoEvents() }
@@ -286,26 +289,25 @@ function Show-InstallChecklist($choices) {
 
     if ($choices.installPython) {
         Step-Running "python" "Installing via winget..."
-        Start-Process winget -ArgumentList "install --id Python.Python.3.13 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        $script:PYTHON = Find-Python; Step-Done "python" "Python 3 installed"
+        Install-ViaWinget "Python.Python.3.13"
+        $choices.pythonPath = Find-Python; Step-Done "python" "Python 3 installed"
     } else { Step-Done "python" "Already installed" }
     $done++; Prog $done $total
 
     if ($choices.installVBox) {
         Step-Running "vbox" "Installing via winget..."
-        Start-Process winget -ArgumentList "install --id Oracle.VirtualBox --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        Install-ViaWinget "Oracle.VirtualBox"
         Step-Done "vbox" "VirtualBox installed"
     } else { Step-Done "vbox" "Already installed" }
     $done++; Prog $done $total
 
     Step-Running "pip" "Installing flask, anthropic, openai, paramiko..."
     Set-Location $VALIDATOR_DIR
-    & $PYTHON -m pip install -r requirements.txt --quiet 2>$null
+    & $PYTHON -c "import flask, anthropic, openai, paramiko" 2>$null
+    if ($LASTEXITCODE -ne 0) { & $PYTHON -m pip install -r requirements.txt --quiet 2>$null }
     $done++; Prog $done $total; Step-Done "pip" "All packages ready"
 
-    if ($steps.Contains("wazuh")) {
+    if ($choices.installWazuh) {
         Step-Manual "wazuh" $WAZUH_OVA_URL
         $script:_wazuhDone = $false
         $stepControls["wazuh"].doneBtn.Add_Click({ $script:_wazuhDone = $true })
@@ -313,7 +315,7 @@ function Show-InstallChecklist($choices) {
         $choices.wazuhVM = Find-WazuhVM; $done++; Prog $done $total; Step-Done "wazuh" "Wazuh VM imported"
     }
 
-    if ($steps.Contains("kali")) {
+    if ($choices.installKali) {
         Step-Manual "kali" "https://www.kali.org/get-kali/#kali-virtual-machines"
         $script:_kaliDone = $false
         $stepControls["kali"].doneBtn.Add_Click({ $script:_kaliDone = $true })
@@ -321,10 +323,10 @@ function Show-InstallChecklist($choices) {
         $choices.kaliVM = Find-KaliVM; $done++; Prog $done $total; Step-Done "kali" "Kali VM imported"
     }
 
-    if ($steps.Contains("configure")) {
+    if ($choices.installWazuh -or $choices.installKali) {
         Step-Running "configure" "Configuring network adapters and VMSVGA..."
         if ($choices.wazuhVM -or $choices.kaliVM) { Configure-VMs $choices.wazuhVM $choices.kaliVM }
-        Start-Sleep 1; $done++; Prog $done $total; Step-Done "configure" "VMs configured"
+        $done++; Prog $done $total; Step-Done "configure" "VMs configured"
     }
 
     Step-Running "save" "Writing .env and config.ini..."
@@ -600,7 +602,7 @@ $choices = Show-Wizard
 
 $PYTHON   = Find-Python
 $choices  = Show-InstallChecklist $choices
-if ($script:PYTHON) { $PYTHON = $script:PYTHON }
+if ($choices.pythonPath) { $PYTHON = $choices.pythonPath }
 
 $cfg      = Read-Config
 $WAZUH_VM = $cfg.wazuh_vm_name
