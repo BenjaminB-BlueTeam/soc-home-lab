@@ -227,7 +227,7 @@ function Show-InstallChecklist($choices) {
 
         $nm = New-Object System.Windows.Forms.Label
         $nm.Text = $stepNames[$key]; $nm.Font = New-Object System.Drawing.Font("Segoe UI",9,[System.Drawing.FontStyle]::Bold)
-        $nm.ForeColor = $TEXT; $nm.Location = New-Object System.Drawing.Point(42,10); $nm.Size = New-Object System.Drawing.Size(220,18); $p.Controls.Add($nm)
+        $nm.ForeColor = $TEXT; $nm.Location = New-Object System.Drawing.Point(42,10); $nm.Size = New-Object System.Drawing.Size(185,18); $p.Controls.Add($nm)
 
         $st = New-Object System.Windows.Forms.Label
         $st.Text = "Waiting..."; $st.ForeColor = $MUTED; $st.Font = New-Object System.Drawing.Font("Segoe UI",8)
@@ -237,13 +237,13 @@ function Show-InstallChecklist($choices) {
         $ob.Text = "Open download page"; $ob.BackColor = $ACCENT; $ob.ForeColor = [System.Drawing.Color]::White
         $ob.FlatStyle = "Flat"; $ob.FlatAppearance.BorderSize = 0; $ob.UseVisualStyleBackColor = $false
         $ob.Font = New-Object System.Drawing.Font("Segoe UI",8)
-        $ob.Location = New-Object System.Drawing.Point(242,15); $ob.Size = New-Object System.Drawing.Size(160,26); $ob.Visible = $false; $p.Controls.Add($ob)
+        $ob.Location = New-Object System.Drawing.Point(238,15); $ob.Size = New-Object System.Drawing.Size(160,26); $ob.Visible = $false; $p.Controls.Add($ob)
 
         $db = New-Object System.Windows.Forms.Button
         $db.Text = "Done  ✓"; $db.BackColor = $GREEN; $db.ForeColor = [System.Drawing.Color]::White
         $db.FlatStyle = "Flat"; $db.FlatAppearance.BorderSize = 0; $db.UseVisualStyleBackColor = $false
         $db.Font = New-Object System.Drawing.Font("Segoe UI",8,[System.Drawing.FontStyle]::Bold)
-        $db.Location = New-Object System.Drawing.Point(410,15); $db.Size = New-Object System.Drawing.Size(86,26); $db.Visible = $false; $db.Enabled = $false; $p.Controls.Add($db)
+        $db.Location = New-Object System.Drawing.Point(406,15); $db.Size = New-Object System.Drawing.Size(86,26); $db.Visible = $false; $db.Enabled = $false; $p.Controls.Add($db)
 
         $form.Controls.Add($p)
         $stepControls[$key] = @{ icon=$ico; status=$st; openBtn=$ob; doneBtn=$db }
@@ -263,7 +263,7 @@ function Show-InstallChecklist($choices) {
         [System.Windows.Forms.Application]::DoEvents()
     }
     function Step-Done($k,$msg) {
-        $stepControls[$k].icon.Text = "✓"; $stepControls[$k].icon.ForeColor = $GREEN
+        $stepControls[$k].icon.Text = "✔"; $stepControls[$k].icon.ForeColor = $GREEN
         $stepControls[$k].status.Text = $msg; $stepControls[$k].status.ForeColor = $GREEN
         $stepControls[$k].openBtn.Visible = $false; $stepControls[$k].doneBtn.Visible = $false
         [System.Windows.Forms.Application]::DoEvents()
