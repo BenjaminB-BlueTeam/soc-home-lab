@@ -99,8 +99,9 @@ function Configure-VMs($wazuhVM, $kaliVM) {
 }
 
 function Test-WazuhReady {
-    try { $t = New-Object System.Net.Sockets.TcpClient; $t.Connect($WAZUH_IP, 55000); $t.Close(); return $true }
-    catch { return $false }
+    try { $t = New-Object System.Net.Sockets.TcpClient; $t.Connect($WAZUH_IP, 55000); $t.Close() } catch { return $false }
+    try { $t = New-Object System.Net.Sockets.TcpClient; $t.Connect($WAZUH_IP, 9200);  $t.Close() } catch { return $false }
+    return $true
 }
 
 function Read-Config {
@@ -509,12 +510,12 @@ if ($wazuhRunning) {
     }
 }
 
-# Poll API — up to 90s extra
-Show-Progress 78 "Waiting for Wazuh API on port 55000..." "Polling every 5 seconds"
-for ($t = 0; $t -lt 90; $t += 5) {
+# Poll until both API (55000) and OpenSearch (9200) are ready — up to 3 min
+Show-Progress 78 "Waiting for Wazuh services..." "API :55000 + OpenSearch :9200"
+for ($t = 0; $t -lt 180; $t += 5) {
     if (Test-WazuhReady) { break }
-    $pct = [int](78 + ($t / 90) * 2)
-    Show-Progress $pct "Waiting for Wazuh API... ($t/90 s)" "Services still starting up"
+    $pct = [int](78 + ($t / 180) * 2)
+    Show-Progress $pct "Waiting for Wazuh services... ($t/180 s)" "API + OpenSearch starting"
     Start-Sleep 5
 }
 
