@@ -13,16 +13,17 @@ $VBOX_DEFAULT  = "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
 $WAZUH_OVA_URL = "https://packages.wazuh.com/4.x/virtual-machine/wazuh-4.14.3.ova"
 $WAZUH_IP      = "192.168.56.101"
 
-# ── Palette ──────────────────────────────────────────────────
-$BG       = [System.Drawing.Color]::FromArgb(10, 14, 26)
-$SURFACE2 = [System.Drawing.Color]::FromArgb(21, 29, 53)
-$ACCENT   = [System.Drawing.Color]::FromArgb(0, 212, 255)
-$GREEN    = [System.Drawing.Color]::FromArgb(16, 185, 129)
-$YELLOW   = [System.Drawing.Color]::FromArgb(245, 158, 11)
-$RED      = [System.Drawing.Color]::FromArgb(239, 68, 68)
-$MUTED    = [System.Drawing.Color]::FromArgb(100, 116, 139)
-$TEXT     = [System.Drawing.Color]::FromArgb(226, 232, 240)
-$SAFE     = [System.Drawing.Color]::FromArgb(100, 200, 100)
+# ── Palette — Discord dark theme ─────────────────────────────
+$BG       = [System.Drawing.Color]::FromArgb(49,  51,  56 )  # #313338  bg-primary
+$SURFACE  = [System.Drawing.Color]::FromArgb(43,  45,  49 )  # #2B2D31  bg-secondary
+$SURFACE2 = [System.Drawing.Color]::FromArgb(30,  31,  34 )  # #1E1F22  bg-tertiary / inputs
+$ACCENT   = [System.Drawing.Color]::FromArgb(88,  101, 242)  # #5865F2  blurple
+$GREEN    = [System.Drawing.Color]::FromArgb(35,  165, 90 )  # #23A55A
+$RED      = [System.Drawing.Color]::FromArgb(242, 63,  67 )  # #F23F43
+$YELLOW   = [System.Drawing.Color]::FromArgb(240, 178, 50 )  # #F0B232
+$TEXT     = [System.Drawing.Color]::FromArgb(219, 222, 225)  # #DBDEE1
+$MUTED    = [System.Drawing.Color]::FromArgb(128, 132, 142)  # #80848E
+$SAFE     = [System.Drawing.Color]::FromArgb(181, 186, 193)  # #B5BAC1
 
 # ── Helpers ───────────────────────────────────────────────────
 
@@ -107,19 +108,130 @@ function Read-Config {
     return $cfg
 }
 
+function Get-X11Layout {
+    # Map Windows culture tag to X11 keyboard layout code
+    $overrides = @{
+        "pt-BR"="br";  "en-GB"="gb";  "fr-CH"="ch(fr)"; "de-CH"="ch"
+        "de-AT"="de";  "fr-BE"="be";  "nl-BE"="be";      "es-MX"="latam"
+        "es-AR"="latam"; "es-CO"="latam"; "es-CL"="latam"
+    }
+    $langMap = @{
+        "fr"="fr"; "de"="de"; "es"="es"; "it"="it"; "pt"="pt"; "nl"="nl"
+        "pl"="pl"; "ru"="ru"; "cs"="cz"; "sk"="sk"; "hu"="hu"; "ro"="ro"
+        "bg"="bg"; "el"="gr"; "tr"="tr"; "ar"="ara"; "he"="il"; "ja"="jp"
+        "ko"="kr"; "zh"="cn"; "uk"="ua"; "sv"="se"; "da"="dk"; "nb"="no"
+        "fi"="fi"; "et"="ee"; "lv"="lv"; "lt"="lt"; "sl"="si"; "hr"="hr"
+        "sr"="rs"; "mk"="mk"; "sq"="sq"; "is"="is"; "th"="th"
+    }
+    try {
+        $tag  = (Get-Culture).Name
+        $lang = $tag.Split("-")[0].ToLower()
+        if ($overrides.ContainsKey($tag))  { return $overrides[$tag] }
+        if ($langMap.ContainsKey($lang))   { return $langMap[$lang]  }
+    } catch {}
+    return "us"
+}
+
+function Get-KaliIP($kaliVM) {
+    try {
+        $props = & $VBOX_DEFAULT guestproperty enumerate $kaliVM 2>$null
+        foreach ($line in ($props -split "`n")) {
+            if ($line -match "Net/\d+/V4/IP\s.*=\s+'(192\.168\.56\.\d+)'") { return $matches[1] }
+        }
+    } catch {}
+    return "192.168.56.102"
+}
+
+$script:pForm  = $null
+$script:pBar   = $null
+$script:pMsg   = $null
+$script:pDet   = $null
+$script:pPct   = $null
+$script:pTrack = $null
+
+function Init-ProgressForm {
+    $script:pForm = New-Object System.Windows.Forms.Form
+    $script:pForm.Text            = "SOC Home Lab"
+    $script:pForm.Size            = New-Object System.Drawing.Size(500, 170)
+    $script:pForm.StartPosition   = "CenterScreen"
+    $script:pForm.BackColor       = $BG
+    $script:pForm.ForeColor       = $TEXT
+    $script:pForm.Font            = New-Object System.Drawing.Font("Segoe UI", 9)
+    $script:pForm.FormBorderStyle = "FixedSingle"
+    $script:pForm.MaximizeBox     = $false
+    $script:pForm.MinimizeBox     = $false
+    $script:pForm.ControlBox      = $false
+    $script:pForm.TopMost         = $true
+
+    # Header strip
+    $hdr = New-Object System.Windows.Forms.Panel
+    $hdr.BackColor = $SURFACE
+    $hdr.Location  = New-Object System.Drawing.Point(0, 0)
+    $hdr.Size      = New-Object System.Drawing.Size(500, 46)
+    $script:pForm.Controls.Add($hdr)
+
+    $ico = New-Object System.Windows.Forms.Label
+    $ico.Text     = "🛡️"; $ico.Font = New-Object System.Drawing.Font("Segoe UI", 13)
+    $ico.Location = New-Object System.Drawing.Point(16, 10); $ico.Size = New-Object System.Drawing.Size(28, 26)
+    $ico.ForeColor = $ACCENT; $hdr.Controls.Add($ico)
+
+    $ttl = New-Object System.Windows.Forms.Label
+    $ttl.Text      = "SOC Home Lab"
+    $ttl.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ttl.ForeColor = $TEXT
+    $ttl.Location  = New-Object System.Drawing.Point(48, 14); $ttl.Size = New-Object System.Drawing.Size(420, 22)
+    $hdr.Controls.Add($ttl)
+
+    # Message
+    $script:pMsg = New-Object System.Windows.Forms.Label
+    $script:pMsg.Location  = New-Object System.Drawing.Point(20, 60)
+    $script:pMsg.Size      = New-Object System.Drawing.Size(460, 20)
+    $script:pMsg.ForeColor = $TEXT
+    $script:pMsg.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
+    $script:pForm.Controls.Add($script:pMsg)
+
+    # Detail
+    $script:pDet = New-Object System.Windows.Forms.Label
+    $script:pDet.Location  = New-Object System.Drawing.Point(20, 82)
+    $script:pDet.Size      = New-Object System.Drawing.Size(420, 16)
+    $script:pDet.ForeColor = $MUTED
+    $script:pDet.Font      = New-Object System.Drawing.Font("Segoe UI", 8)
+    $script:pForm.Controls.Add($script:pDet)
+
+    # Percentage
+    $script:pPct = New-Object System.Windows.Forms.Label
+    $script:pPct.Location   = New-Object System.Drawing.Point(448, 82)
+    $script:pPct.Size       = New-Object System.Drawing.Size(36, 16)
+    $script:pPct.ForeColor  = $MUTED
+    $script:pPct.Font       = New-Object System.Drawing.Font("Segoe UI", 8)
+    $script:pPct.TextAlign  = "MiddleRight"
+    $script:pForm.Controls.Add($script:pPct)
+
+    # Progress track (background)
+    $script:pTrack = New-Object System.Windows.Forms.Panel
+    $script:pTrack.BackColor = $SURFACE2
+    $script:pTrack.Location  = New-Object System.Drawing.Point(20, 116)
+    $script:pTrack.Size      = New-Object System.Drawing.Size(460, 4)
+    $script:pForm.Controls.Add($script:pTrack)
+
+    # Progress fill (blurple)
+    $script:pBar = New-Object System.Windows.Forms.Panel
+    $script:pBar.BackColor = $ACCENT
+    $script:pBar.Location  = New-Object System.Drawing.Point(20, 116)
+    $script:pBar.Size      = New-Object System.Drawing.Size(0, 4)
+    $script:pForm.Controls.Add($script:pBar)
+
+    $script:pForm.Show()
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
 function Show-Progress($pct, $msg, $detail = "") {
-    Clear-Host
-    Write-Host ""
-    Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "  ║           SOC HOME LAB                       ║" -ForegroundColor Cyan
-    Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    $w = 44; $f = [math]::Round($w * $pct / 100)
-    Write-Host "  [$(("█" * $f) + ("░" * ($w - $f)))] $pct%" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  ► $msg" -ForegroundColor Yellow
-    if ($detail) { Write-Host "    $detail" -ForegroundColor DarkGray }
-    Write-Host ""
+    if ($null -eq $script:pForm -or $script:pForm.IsDisposed) { Init-ProgressForm }
+    $script:pMsg.Text  = $msg
+    $script:pDet.Text  = $detail
+    $script:pPct.Text  = "$pct%"
+    $script:pBar.Width = [int](460 * [math]::Min($pct, 100) / 100)
+    [System.Windows.Forms.Application]::DoEvents()
 }
 
 # ── Setup Wizard ──────────────────────────────────────────────
@@ -257,7 +369,7 @@ function Show-Wizard {
 
     $btn = New-Object System.Windows.Forms.Button
     $btn.Text = "Setup && Launch  →"; $btn.BackColor = $ACCENT
-    $btn.ForeColor = [System.Drawing.Color]::FromArgb(10, 14, 26)
+    $btn.ForeColor = [System.Drawing.Color]::White
     $btn.FlatStyle = "Flat"; $btn.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $btn.FlatAppearance.BorderSize = 0
     $btn.Location = New-Object System.Drawing.Point(396, 476); $btn.Size = New-Object System.Drawing.Size(148, 36)
@@ -442,6 +554,51 @@ if ($kaliRunning) {
     Start-Sleep 5
 }
 
+# Configure Kali — keyboard layout + SSH auto-start
+$x11Layout = Get-X11Layout
+$KALI_IP   = Get-KaliIP $KALI_VM
+Show-Progress 90 "Configuring Kali (keyboard: $x11Layout)..." "Waiting for SSH on $KALI_IP"
+$kaliScript = @"
+import paramiko, socket, time, sys
+
+def wait_ssh(host, timeout=40):
+    for _ in range(timeout):
+        try:
+            s = socket.socket(); s.settimeout(1); s.connect((host, 22)); s.close(); return True
+        except: time.sleep(1)
+    return False
+
+host = '$KALI_IP'
+if not wait_ssh(host):
+    print('NO_SSH'); sys.exit(0)
+
+c = paramiko.SSHClient()
+c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+try:
+    c.connect(host, username='kali', password='kali', timeout=8)
+    for cmd in [
+        'sudo localectl set-x11-keymap $x11Layout',
+        'sudo localectl set-keymap $x11Layout',
+        'sudo systemctl enable ssh',
+    ]:
+        _, o, e = c.exec_command(cmd, timeout=10)
+        o.read(); e.read()
+    c.close()
+    print('CONFIGURED')
+except Exception as ex:
+    print(f'ERROR: {ex}')
+"@
+$tmpK = [System.IO.Path]::GetTempFileName() + ".py"
+$kaliScript | Set-Content $tmpK -Encoding UTF8
+$kaliResult = & $PYTHON $tmpK 2>&1
+Remove-Item $tmpK -ErrorAction SilentlyContinue
+
+if ("$kaliResult" -match "CONFIGURED") {
+    Show-Progress 92 "Kali configured — keyboard: $x11Layout, SSH enabled at boot" ""
+} else {
+    Show-Progress 92 "Kali SSH not available — keyboard not configured" "Open Kali terminal and run: sudo systemctl start ssh"
+}
+
 # Start AI Validator
 Show-Progress 93 "Starting AI Validator..." "Flask on port 5000"
 Set-Location $VALIDATOR_DIR
@@ -458,23 +615,74 @@ Start-Sleep 2
 Start-Process "http://localhost:5000"
 Start-Sleep 1
 
-# ── Done ──────────────────────────────────────────────────────
-Clear-Host
-Write-Host ""
-Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║         SOC HOME LAB — READY!                ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════════════════╝" -ForegroundColor Green
-Write-Host ""
-Write-Host "  ████████████████████████████████████████████  100%" -ForegroundColor Green
-Write-Host ""
-$wazuhColor = if ($wazuhOK) { "Green" } else { "Yellow" }
-$wazuhNote  = if ($wazuhOK) { "" } else { "  ⚠  API not responding — check wazuh-manager inside the VM" }
-Write-Host "  ✓ Wazuh SIEM      →  https://$WAZUH_IP          (admin / WazuhLab123*)" -ForegroundColor $wazuhColor
-if ($wazuhNote) { Write-Host $wazuhNote -ForegroundColor Yellow }
-Write-Host "  ✓ Kali Linux      →  VirtualBox window" -ForegroundColor Green
-Write-Host "  ✓ AI Validator    →  http://localhost:5000" -ForegroundColor Green
-Write-Host ""
-Write-Host "  AI provider : $($choices.provider)  |  Key saved locally in ai-validator/.env" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "  Press any key to close this window..." -ForegroundColor DarkGray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+# ── Done — close progress, show ready dialog ──────────────────
+if ($script:pForm -and -not $script:pForm.IsDisposed) { $script:pForm.Close() }
+
+$readyForm = New-Object System.Windows.Forms.Form
+$readyForm.Text            = "SOC Home Lab — Ready"
+$readyForm.Size            = New-Object System.Drawing.Size(480, 280)
+$readyForm.StartPosition   = "CenterScreen"
+$readyForm.BackColor       = $BG
+$readyForm.ForeColor       = $TEXT
+$readyForm.Font            = New-Object System.Drawing.Font("Segoe UI", 9)
+$readyForm.FormBorderStyle = "FixedSingle"
+$readyForm.MaximizeBox     = $false
+$readyForm.TopMost         = $true
+
+# Header
+$rHdr = New-Object System.Windows.Forms.Panel
+$rHdr.BackColor = $SURFACE; $rHdr.Location = New-Object System.Drawing.Point(0, 0); $rHdr.Size = New-Object System.Drawing.Size(480, 52)
+$readyForm.Controls.Add($rHdr)
+
+$rIco = New-Object System.Windows.Forms.Label
+$rIco.Text = "🛡️"; $rIco.Font = New-Object System.Drawing.Font("Segoe UI", 14)
+$rIco.ForeColor = $ACCENT; $rIco.Location = New-Object System.Drawing.Point(16, 12); $rIco.Size = New-Object System.Drawing.Size(30, 28)
+$rHdr.Controls.Add($rIco)
+
+$rTitle = New-Object System.Windows.Forms.Label
+$rTitle.Text = "SOC Home Lab — Ready"; $rTitle.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+$rTitle.ForeColor = $GREEN; $rTitle.Location = New-Object System.Drawing.Point(52, 16); $rTitle.Size = New-Object System.Drawing.Size(400, 24)
+$rHdr.Controls.Add($rTitle)
+
+# Status rows
+$y = 68
+foreach ($row in @(
+    @{ icon = "●"; color = $(if ($wazuhOK) { $GREEN } else { $YELLOW }); text = "Wazuh SIEM"; sub = "https://$WAZUH_IP  (admin / WazuhLab123*)$(if (-not $wazuhOK) { '  ⚠ API not responding' } else { '' })" },
+    @{ icon = "●"; color = $GREEN; text = "Kali Linux";   sub = "VirtualBox window" },
+    @{ icon = "●"; color = $GREEN; text = "AI Validator"; sub = "http://localhost:5000" }
+)) {
+    $dot = New-Object System.Windows.Forms.Label
+    $dot.Text = $row.icon; $dot.ForeColor = $row.color; $dot.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+    $dot.Location = New-Object System.Drawing.Point(20, $y); $dot.Size = New-Object System.Drawing.Size(14, 18)
+    $readyForm.Controls.Add($dot)
+
+    $svc = New-Object System.Windows.Forms.Label
+    $svc.Text = $row.text; $svc.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $svc.ForeColor = $TEXT; $svc.Location = New-Object System.Drawing.Point(36, $y); $svc.Size = New-Object System.Drawing.Size(120, 18)
+    $readyForm.Controls.Add($svc)
+
+    $sub = New-Object System.Windows.Forms.Label
+    $sub.Text = $row.sub; $sub.ForeColor = $MUTED; $sub.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+    $sub.Location = New-Object System.Drawing.Point(36, ($y + 18)); $sub.Size = New-Object System.Drawing.Size(420, 16)
+    $readyForm.Controls.Add($sub)
+    $y += 46
+}
+
+# Footer info
+$rInfo = New-Object System.Windows.Forms.Label
+$rInfo.Text = "AI provider: $($choices.provider)  |  Key saved in ai-validator\.env"
+$rInfo.ForeColor = $MUTED; $rInfo.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+$rInfo.Location = New-Object System.Drawing.Point(20, 212); $rInfo.Size = New-Object System.Drawing.Size(440, 16)
+$readyForm.Controls.Add($rInfo)
+
+# Close button
+$rBtn = New-Object System.Windows.Forms.Button
+$rBtn.Text = "Close"; $rBtn.BackColor = $SURFACE2; $rBtn.ForeColor = $TEXT
+$rBtn.FlatStyle = "Flat"; $rBtn.FlatAppearance.BorderSize = 0
+$rBtn.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$rBtn.Location = New-Object System.Drawing.Point(356, 204); $rBtn.Size = New-Object System.Drawing.Size(100, 32)
+$rBtn.Add_Click({ $readyForm.Close() })
+$readyForm.Controls.Add($rBtn)
+$readyForm.AcceptButton = $rBtn
+
+$readyForm.ShowDialog() | Out-Null

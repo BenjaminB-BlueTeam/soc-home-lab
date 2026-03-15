@@ -24,6 +24,40 @@ function clearReport() {
   loadTemplate(currentAttack);
 }
 
+function renderAlerts(alerts, source) {
+  const section = document.getElementById('wazuh-alerts-section');
+  const list = document.getElementById('wazuh-alerts-list');
+  section.style.display = 'block';
+
+  const sourceLabel = source === 'opensearch'
+    ? '<div class="alert-source source-live">● OpenSearch — real alerts</div>'
+    : '<div class="alert-source source-fallback">⚠ Fallback: manager logs (no SSH tunnel)</div>';
+
+  list.innerHTML = sourceLabel + alerts.map(a => {
+    const lvl = a.rule?.level || 0;
+    const sev = lvl >= 12 ? 'critical' : lvl >= 8 ? 'high' : lvl >= 5 ? 'medium' : '';
+    const badge = sev
+      ? `<span class="alert-sev-badge badge-${sev}">${sev}</span>`
+      : `<span style="color:var(--muted);font-size:10px;margin-left:6px">low</span>`;
+    const isNetwork = a.rule?.id == 86601
+                   || a.rule?.groups?.includes('ids')
+                   || a.rule?.groups?.includes('suricata');
+    const typeTag = isNetwork
+      ? `<span class="badge-network">NETWORK</span>`
+      : `<span class="badge-host">HOST</span>`;
+    return `
+      <div class="wazuh-alert-item ${sev}" onclick='fillFromAlert(${JSON.stringify(a)})'>
+        <div class="alert-rule">${a.rule?.description || 'Unknown rule'}${badge}${typeTag}</div>
+        <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${lvl} • ${(a.timestamp || '').substring(0,19)}</div>
+      </div>`
+  }).join('');
+}
+
+function updateLastRefreshed() {
+  const el = document.getElementById('last-refreshed');
+  if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
 async function importFromWazuh() {
   const section = document.getElementById('wazuh-alerts-section');
   const list = document.getElementById('wazuh-alerts-list');
@@ -39,26 +73,23 @@ async function importFromWazuh() {
       return;
     }
 
-    const sourceLabel = d.source === 'opensearch'
-      ? '<div class="alert-source source-live">● OpenSearch — real alerts</div>'
-      : '<div class="alert-source source-fallback">⚠ Fallback: manager logs (no SSH tunnel)</div>';
-
-    list.innerHTML = sourceLabel + d.alerts.map(a => {
-      const lvl = a.rule?.level || 0;
-      const sev = lvl >= 12 ? 'critical' : lvl >= 8 ? 'high' : lvl >= 5 ? 'medium' : '';
-      const badge = sev
-        ? `<span class="alert-sev-badge badge-${sev}">${sev}</span>`
-        : `<span style="color:var(--muted);font-size:10px;margin-left:6px">low</span>`;
-      return `
-      <div class="wazuh-alert-item ${sev}" onclick='fillFromAlert(${JSON.stringify(a)})'>
-        <div class="alert-rule">${a.rule?.description || 'Unknown rule'}${badge}</div>
-        <div class="alert-meta">${a.agent?.name || 'unknown'} • Level ${lvl} • ${(a.timestamp || '').substring(0,19)}</div>
-      </div>`
-    }).join('');
+    renderAlerts(d.alerts, d.source);
+    updateLastRefreshed();
 
   } catch(e) {
     list.innerHTML = '<div class="wazuh-alert-item"><span class="alert-meta" style="color:var(--red)">Cannot connect to Wazuh</span></div>';
   }
+}
+
+async function silentRefresh() {
+  try {
+    const r = await fetch('/api/wazuh/alerts');
+    const d = await r.json();
+    if (d.alerts?.length) {
+      renderAlerts(d.alerts, d.source);
+      updateLastRefreshed();
+    }
+  } catch (_) {}
 }
 
 function fillFromAlert(alert) {
@@ -235,3 +266,5 @@ function switchTab(tab) {
 // Init
 loadTemplate(currentAttack);
 loadHistory();
+importFromWazuh();
+setInterval(silentRefresh, 30000);

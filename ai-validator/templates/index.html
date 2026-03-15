@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SOC Home Lab — AI Validator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -16,8 +16,9 @@
     SOC Home Lab
   </div>
   <div class="status-bar">
-    <span><span class="status-dot"></span>Wazuh 192.168.56.101</span>
+    <span><span class="status-dot"></span>Wazuh connected</span>
     <span class="version">AI Validator v1.0</span>
+    <span id="last-refreshed"></span>
   </div>
 </header>
 
@@ -26,8 +27,7 @@
   <!-- Left panel -->
   <div class="panel">
     <div class="panel-header">
-      <span class="panel-title">Investigation Report</span>
-      <button class="btn-secondary small" onclick="importFromWazuh()">⬇ Import from Wazuh</button>
+      <span class="panel-title"># investigation-report</span>
     </div>
     <div class="panel-body">
 
