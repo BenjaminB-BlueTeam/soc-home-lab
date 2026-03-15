@@ -5,7 +5,64 @@ import json
 import os
 import urllib3
 from datetime import datetime
-from sshtunnel import SSHTunnelForwarder
+import paramiko
+import socket
+import threading
+import contextlib
+
+@contextlib.contextmanager
+def ssh_tunnel(host, ssh_user, ssh_pass, remote_port):
+    """SSH tunnel using paramiko directly — replaces sshtunnel (incompatible with paramiko 3+)."""
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, port=22, username=ssh_user, password=ssh_pass, timeout=10)
+
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(('127.0.0.1', 0))
+    local_port = srv.getsockname()[1]
+    srv.listen(5)
+    srv.settimeout(1)
+    stop = threading.Event()
+
+    def _forward():
+        while not stop.is_set():
+            try:
+                conn, addr = srv.accept()
+            except socket.timeout:
+                continue
+            except Exception:
+                break
+            try:
+                chan = client.get_transport().open_channel(
+                    'direct-tcpip', ('127.0.0.1', remote_port), addr)
+            except Exception:
+                conn.close()
+                continue
+            def _relay(src, dst):
+                try:
+                    while True:
+                        data = src.recv(4096)
+                        if not data:
+                            break
+                        dst.sendall(data)
+                except Exception:
+                    pass
+                finally:
+                    try: src.close()
+                    except Exception: pass
+                    try: dst.close()
+                    except Exception: pass
+            threading.Thread(target=_relay, args=(conn, chan), daemon=True).start()
+            threading.Thread(target=_relay, args=(chan, conn), daemon=True).start()
+        srv.close()
+        client.close()
+
+    threading.Thread(target=_forward, daemon=True).start()
+    try:
+        yield local_port
+    finally:
+        stop.set()
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
@@ -245,13 +302,8 @@ def get_wazuh_real_alerts(limit=20):
     Falls back to level >= 3 if nothing found at level 5.
     """
     try:
-        with SSHTunnelForwarder(
-            (WAZUH_HOST, 22),
-            ssh_username=WAZUH_SSH_USER,
-            ssh_password=WAZUH_SSH_PASSWORD,
-            remote_bind_address=("127.0.0.1", 9200),
-        ) as tunnel:
-            url = f"https://127.0.0.1:{tunnel.local_bind_port}/wazuh-alerts-*/_search"
+        with ssh_tunnel(WAZUH_HOST, WAZUH_SSH_USER, WAZUH_SSH_PASSWORD, 9200) as local_port:
+            url = f"https://127.0.0.1:{local_port}/wazuh-alerts-*/_search"
 
             def query(min_level):
                 return {
