@@ -392,7 +392,7 @@ function Show-Wizard {
 
     # Status + button
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.ForeColor = $RED; $lblStatus.Location = New-Object System.Drawing.Point(24, 492); $lblStatus.Size = New-Object System.Drawing.Size(340, 18)
+    $lblStatus.ForeColor = $RED; $lblStatus.BackColor = $BG; $lblStatus.Location = New-Object System.Drawing.Point(24, 492); $lblStatus.Size = New-Object System.Drawing.Size(340, 18)
     $form.Controls.Add($lblStatus)
 
     $btn = New-Object System.Windows.Forms.Button
