@@ -175,6 +175,174 @@ $script:pDet   = $null
 $script:pPct   = $null
 $script:pTrack = $null
 
+function Show-InstallChecklist($choices) {
+    $STEP_H = 58; $STEP_X = 16; $STEP_W = 512
+
+    $steps = [System.Collections.ArrayList]@()
+    if ($choices.installPython) { $steps.Add("python")    | Out-Null }
+    if ($choices.installVBox)   { $steps.Add("vbox")      | Out-Null }
+    $steps.Add("pip") | Out-Null
+    if ($choices.installWazuh)  { $steps.Add("wazuh")     | Out-Null }
+    if ($choices.installKali)   { $steps.Add("kali")      | Out-Null }
+    if ($choices.installWazuh -or $choices.installKali) { $steps.Add("configure") | Out-Null }
+    $steps.Add("save") | Out-Null
+
+    $stepNames = @{
+        python    = "Python 3"
+        vbox      = "VirtualBox"
+        pip       = "Python packages"
+        wazuh     = "Wazuh SIEM"
+        kali      = "Kali Linux"
+        configure = "Configure VMs"
+        save      = "Save configuration"
+    }
+
+    $formH = 68 + ($steps.Count * ($STEP_H + 8)) + 30
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "SOC Home Lab"; $form.Size = New-Object System.Drawing.Size(548, $formH)
+    $form.StartPosition = "CenterScreen"; $form.BackColor = $BG; $form.ForeColor = $TEXT
+    $form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $form.FormBorderStyle = "FixedSingle"; $form.MaximizeBox = $false; $form.MinimizeBox = $false
+    $form.Add_FormClosing({ [System.Environment]::Exit(0) })
+
+    $hdr = New-Object System.Windows.Forms.Panel
+    $hdr.BackColor = $SURFACE; $hdr.Location = New-Object System.Drawing.Point(0,0)
+    $hdr.Size = New-Object System.Drawing.Size(548, 52); $form.Controls.Add($hdr)
+    $hIco = New-Object System.Windows.Forms.Panel
+    $hIco.BackColor = $ACCENT; $hIco.Location = New-Object System.Drawing.Point(16,16); $hIco.Size = New-Object System.Drawing.Size(20,20); $hdr.Controls.Add($hIco)
+    $hLbl = New-Object System.Windows.Forms.Label
+    $hLbl.Text = "SOC Home Lab  —  Setup"; $hLbl.Font = New-Object System.Drawing.Font("Segoe UI",10,[System.Drawing.FontStyle]::Bold)
+    $hLbl.ForeColor = $TEXT; $hLbl.Location = New-Object System.Drawing.Point(44,15); $hLbl.Size = New-Object System.Drawing.Size(460,24); $hdr.Controls.Add($hLbl)
+
+    $stepControls = @{}
+    $yOff = 60
+    foreach ($key in $steps) {
+        $p = New-Object System.Windows.Forms.Panel
+        $p.BackColor = $SURFACE; $p.Location = New-Object System.Drawing.Point($STEP_X,$yOff); $p.Size = New-Object System.Drawing.Size($STEP_W,$STEP_H)
+
+        $ico = New-Object System.Windows.Forms.Label
+        $ico.Text = "○"; $ico.ForeColor = $MUTED
+        $ico.Font = New-Object System.Drawing.Font("Segoe UI",12,[System.Drawing.FontStyle]::Bold)
+        $ico.Location = New-Object System.Drawing.Point(12,17); $ico.Size = New-Object System.Drawing.Size(22,22); $p.Controls.Add($ico)
+
+        $nm = New-Object System.Windows.Forms.Label
+        $nm.Text = $stepNames[$key]; $nm.Font = New-Object System.Drawing.Font("Segoe UI",9,[System.Drawing.FontStyle]::Bold)
+        $nm.ForeColor = $TEXT; $nm.Location = New-Object System.Drawing.Point(42,10); $nm.Size = New-Object System.Drawing.Size(220,18); $p.Controls.Add($nm)
+
+        $st = New-Object System.Windows.Forms.Label
+        $st.Text = "Waiting..."; $st.ForeColor = $MUTED; $st.Font = New-Object System.Drawing.Font("Segoe UI",8)
+        $st.Location = New-Object System.Drawing.Point(42,30); $st.Size = New-Object System.Drawing.Size(240,16); $p.Controls.Add($st)
+
+        $ob = New-Object System.Windows.Forms.Button
+        $ob.Text = "Open download page"; $ob.BackColor = $ACCENT; $ob.ForeColor = [System.Drawing.Color]::White
+        $ob.FlatStyle = "Flat"; $ob.FlatAppearance.BorderSize = 0; $ob.UseVisualStyleBackColor = $false
+        $ob.Font = New-Object System.Drawing.Font("Segoe UI",8)
+        $ob.Location = New-Object System.Drawing.Point(268,15); $ob.Size = New-Object System.Drawing.Size(130,26); $ob.Visible = $false; $p.Controls.Add($ob)
+
+        $db = New-Object System.Windows.Forms.Button
+        $db.Text = "Imported  ✓"; $db.BackColor = $GREEN; $db.ForeColor = [System.Drawing.Color]::White
+        $db.FlatStyle = "Flat"; $db.FlatAppearance.BorderSize = 0; $db.UseVisualStyleBackColor = $false
+        $db.Font = New-Object System.Drawing.Font("Segoe UI",8,[System.Drawing.FontStyle]::Bold)
+        $db.Location = New-Object System.Drawing.Point(406,15); $db.Size = New-Object System.Drawing.Size(96,26); $db.Visible = $false; $db.Enabled = $false; $p.Controls.Add($db)
+
+        $form.Controls.Add($p)
+        $stepControls[$key] = @{ icon=$ico; status=$st; openBtn=$ob; doneBtn=$db }
+        $yOff += $STEP_H + 8
+    }
+
+    $progTrack = New-Object System.Windows.Forms.Panel
+    $progTrack.BackColor = $SURFACE2; $progTrack.Location = New-Object System.Drawing.Point($STEP_X,($yOff+6)); $progTrack.Size = New-Object System.Drawing.Size($STEP_W,4)
+    $form.Controls.Add($progTrack)
+    $progBar = New-Object System.Windows.Forms.Panel
+    $progBar.BackColor = $ACCENT; $progBar.Location = New-Object System.Drawing.Point($STEP_X,($yOff+6)); $progBar.Size = New-Object System.Drawing.Size(0,4)
+    $form.Controls.Add($progBar)
+
+    function Step-Running($k,$msg) {
+        $stepControls[$k].icon.Text = "↻"; $stepControls[$k].icon.ForeColor = $YELLOW
+        $stepControls[$k].status.Text = $msg; $stepControls[$k].status.ForeColor = $YELLOW
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    function Step-Done($k,$msg) {
+        $stepControls[$k].icon.Text = "✓"; $stepControls[$k].icon.ForeColor = $GREEN
+        $stepControls[$k].status.Text = $msg; $stepControls[$k].status.ForeColor = $GREEN
+        $stepControls[$k].openBtn.Visible = $false; $stepControls[$k].doneBtn.Visible = $false
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    function Step-Manual($k,$url) {
+        $stepControls[$k].icon.Text = "→"; $stepControls[$k].icon.ForeColor = $ACCENT
+        $stepControls[$k].status.Text = "Download, import in VirtualBox, then click Done"
+        $stepControls[$k].status.ForeColor = $TEXT
+        $stepControls[$k].openBtn.Visible = $true; $stepControls[$k].openBtn.Enabled = $true
+        $stepControls[$k].doneBtn.Visible = $true
+        $c = $stepControls[$k]; $c.openBtn.Add_Click({ Start-Process $url; $c.doneBtn.Enabled = $true })
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+    function Prog($n,$t) { $progBar.Width = [int]($STEP_W * $n / $t); [System.Windows.Forms.Application]::DoEvents() }
+
+    $form.Show(); [System.Windows.Forms.Application]::DoEvents()
+    $done = 0; $total = $steps.Count
+
+    if ($steps.Contains("python")) {
+        Step-Running "python" "Installing via winget..."
+        Start-Process winget -ArgumentList "install --id Python.Python.3.13 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        $script:PYTHON = Find-Python; $done++; Prog $done $total; Step-Done "python" "Python 3 installed"
+    }
+
+    if ($steps.Contains("vbox")) {
+        Step-Running "vbox" "Installing via winget..."
+        Start-Process winget -ArgumentList "install --id Oracle.VirtualBox --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        $done++; Prog $done $total; Step-Done "vbox" "VirtualBox installed"
+    }
+
+    Step-Running "pip" "Installing flask, anthropic, openai, paramiko..."
+    Set-Location $VALIDATOR_DIR
+    & $PYTHON -m pip install -r requirements.txt --quiet 2>$null
+    $done++; Prog $done $total; Step-Done "pip" "All packages ready"
+
+    if ($steps.Contains("wazuh")) {
+        Step-Manual "wazuh" $WAZUH_OVA_URL
+        $script:_wazuhDone = $false
+        $stepControls["wazuh"].doneBtn.Add_Click({ $script:_wazuhDone = $true })
+        while (-not $script:_wazuhDone) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100 }
+        $choices.wazuhVM = Find-WazuhVM; $done++; Prog $done $total; Step-Done "wazuh" "Wazuh VM imported"
+    }
+
+    if ($steps.Contains("kali")) {
+        Step-Manual "kali" "https://www.kali.org/get-kali/#kali-virtual-machines"
+        $script:_kaliDone = $false
+        $stepControls["kali"].doneBtn.Add_Click({ $script:_kaliDone = $true })
+        while (-not $script:_kaliDone) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100 }
+        $choices.kaliVM = Find-KaliVM; $done++; Prog $done $total; Step-Done "kali" "Kali VM imported"
+    }
+
+    if ($steps.Contains("configure")) {
+        Step-Running "configure" "Configuring network adapters and VMSVGA..."
+        if ($choices.wazuhVM -or $choices.kaliVM) { Configure-VMs $choices.wazuhVM $choices.kaliVM }
+        Start-Sleep 1; $done++; Prog $done $total; Step-Done "configure" "VMs configured"
+    }
+
+    Step-Running "save" "Writing .env and config.ini..."
+    @(
+        "AI_PROVIDER=$($choices.provider)",
+        "ANTHROPIC_API_KEY=$(if ($choices.provider -eq 'claude') { $choices.apiKey } else { '' })",
+        "OPENAI_API_KEY=$(if ($choices.provider -eq 'openai') { $choices.apiKey } else { '' })",
+        "WAZUH_HOST=$WAZUH_IP", "WAZUH_PORT=55000", "WAZUH_USER=wazuh", "WAZUH_PASSWORD=wazuh",
+        "WAZUH_SSH_USER=wazuh-user", "WAZUH_SSH_PASSWORD=wazuh",
+        "WAZUH_INDEXER_USER=admin", "WAZUH_INDEXER_PASSWORD=WazuhLab123*"
+    ) | Set-Content "$VALIDATOR_DIR\.env" -Encoding UTF8
+    @(
+        "[VMs]", "wazuh_vm_name=$($choices.wazuhVM)", "kali_vm_name=$($choices.kaliVM)", "",
+        "[Network]", "wazuh_ip=$WAZUH_IP", "", "[API]", "ai_provider=$($choices.provider)", "",
+        "[Paths]", "vboxmanage=$VBOX_DEFAULT"
+    ) | Set-Content $CONFIG_FILE -Encoding UTF8
+    $done++; Prog $done $total; Step-Done "save" "Configuration saved"
+
+    Start-Sleep 1; $form.Close()
+    return $choices
+}
+
 function Init-ProgressForm {
     $script:pForm = New-Object System.Windows.Forms.Form
     $script:pForm.Text            = "SOC Home Lab"
@@ -426,85 +594,9 @@ function Show-Wizard {
 
 $choices = Show-Wizard
 
-$PYTHON = Find-Python
-
-$total = 6 + [int]$choices.installPython + [int]$choices.installVBox + [int]$choices.installWazuh + [int]$choices.installKali
-$step  = 0
-
-# Install Python
-if ($choices.installPython) {
-    $step++; Show-Progress ([math]::Round($step/$total*25)) "Installing Python 3..." "via winget — may take a few minutes"
-    Start-Process winget -ArgumentList "install --id Python.Python.3.13 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-    $PYTHON = Find-Python
-}
-
-# Install VirtualBox
-if ($choices.installVBox) {
-    $step++; Show-Progress ([math]::Round($step/$total*25)) "Installing VirtualBox..." "via winget — may take a few minutes"
-    Start-Process winget -ArgumentList "install --id Oracle.VirtualBox --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-}
-
-# Python packages
-$step++; Show-Progress ([math]::Round($step/$total*35)) "Installing Python packages..." "flask, anthropic, openai, sshtunnel, paramiko..."
-Set-Location $VALIDATOR_DIR
-& $PYTHON -m pip install -r requirements.txt --quiet 2>$null
-
-# Download & import Wazuh
-if ($choices.installWazuh) {
-    $step++
-    Start-Process $WAZUH_OVA_URL
-    Show-Progress ([math]::Round($step/$total*35)) "Opening Wazuh download page..." "Download the OVA (~3.5 GB), then import it in VirtualBox and press Enter"
-    Read-Host "Press Enter once Wazuh OVA is imported in VirtualBox"
-    $choices.wazuhVM = Find-WazuhVM
-}
-
-# Download Kali
-if ($choices.installKali) {
-    $step++
-    Start-Process "https://www.kali.org/get-kali/#kali-virtual-machines"
-    Show-Progress ([math]::Round($step/$total*40)) "Opening Kali download page..." "Download the VirtualBox image (.vbox), extract and import it, then press Enter"
-    Read-Host "Press Enter once Kali is imported in VirtualBox"
-    $choices.kaliVM = Find-KaliVM
-}
-
-# Configure VM network + VMSVGA
-$step++; Show-Progress ([math]::Round($step/$total*55)) "Configuring VMs..." "network adapters + VMSVGA (requires VMs to be off)"
-if ($choices.wazuhVM -or $choices.kaliVM) { Configure-VMs $choices.wazuhVM $choices.kaliVM }
-Start-Sleep 1
-
-# Save .env
-$step++; Show-Progress ([math]::Round($step/$total*60)) "Saving configuration..." ""
-$envLines = @(
-    "AI_PROVIDER=$($choices.provider)",
-    "ANTHROPIC_API_KEY=$(if ($choices.provider -eq 'claude') { $choices.apiKey } else { '' })",
-    "OPENAI_API_KEY=$(if ($choices.provider -eq 'openai') { $choices.apiKey } else { '' })",
-    "WAZUH_HOST=$WAZUH_IP",
-    "WAZUH_PORT=55000",
-    "WAZUH_USER=wazuh",
-    "WAZUH_PASSWORD=wazuh",
-    "WAZUH_SSH_USER=wazuh-user",
-    "WAZUH_SSH_PASSWORD=wazuh",
-    "WAZUH_INDEXER_USER=admin",
-    "WAZUH_INDEXER_PASSWORD=WazuhLab123*"
-)
-$envLines | Set-Content "$VALIDATOR_DIR\.env" -Encoding UTF8
-
-@(
-    "[VMs]",
-    "wazuh_vm_name=$($choices.wazuhVM)",
-    "kali_vm_name=$($choices.kaliVM)",
-    "",
-    "[Network]",
-    "wazuh_ip=$WAZUH_IP",
-    "",
-    "[API]",
-    "ai_provider=$($choices.provider)",
-    "",
-    "[Paths]",
-    "vboxmanage=$VBOX_DEFAULT"
-) | Set-Content $CONFIG_FILE -Encoding UTF8
+$PYTHON   = Find-Python
+$choices  = Show-InstallChecklist $choices
+if ($script:PYTHON) { $PYTHON = $script:PYTHON }
 
 $cfg      = Read-Config
 $WAZUH_VM = $cfg.wazuh_vm_name
