@@ -626,6 +626,8 @@ Start-Sleep 1
 # ── Done — close progress, show ready dialog ──────────────────
 if ($script:pForm -and -not $script:pForm.IsDisposed) { $script:pForm.Close() }
 
+$wazuhOK = Test-WazuhReady   # fresh check after all startup steps
+
 $readyForm = New-Object System.Windows.Forms.Form
 $readyForm.Text            = "SOC Home Lab — Ready"
 $readyForm.Size            = New-Object System.Drawing.Size(480, 280)
@@ -654,13 +656,33 @@ $rHdr.Controls.Add($rTitle)
 
 # Status rows
 $y = 68
+
+# Wazuh row — keep named refs so the Recheck button can update them
+$wazuhDot = New-Object System.Windows.Forms.Label
+$wazuhDot.Text = "●"; $wazuhDot.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+$wazuhDot.ForeColor = if ($wazuhOK) { $GREEN } else { $YELLOW }
+$wazuhDot.Location = New-Object System.Drawing.Point(20, $y); $wazuhDot.Size = New-Object System.Drawing.Size(14, 18)
+$readyForm.Controls.Add($wazuhDot)
+
+$wazuhSvcLbl = New-Object System.Windows.Forms.Label
+$wazuhSvcLbl.Text = "Wazuh SIEM"; $wazuhSvcLbl.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$wazuhSvcLbl.ForeColor = $TEXT; $wazuhSvcLbl.Location = New-Object System.Drawing.Point(36, $y); $wazuhSvcLbl.Size = New-Object System.Drawing.Size(120, 18)
+$readyForm.Controls.Add($wazuhSvcLbl)
+
+$wazuhSubLbl = New-Object System.Windows.Forms.Label
+$wazuhSubLbl.Text = "https://$WAZUH_IP  (admin / WazuhLab123*)$(if (-not $wazuhOK) { '  — API still starting' } else { '' })"
+$wazuhSubLbl.ForeColor = $MUTED; $wazuhSubLbl.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+$wazuhSubLbl.Location = New-Object System.Drawing.Point(36, ($y + 18)); $wazuhSubLbl.Size = New-Object System.Drawing.Size(420, 16)
+$readyForm.Controls.Add($wazuhSubLbl)
+$y += 46
+
+# Kali + Validator rows
 foreach ($row in @(
-    @{ icon = "●"; color = $(if ($wazuhOK) { $GREEN } else { $YELLOW }); text = "Wazuh SIEM"; sub = "https://$WAZUH_IP  (admin / WazuhLab123*)$(if (-not $wazuhOK) { '  ⚠ API not responding' } else { '' })" },
-    @{ icon = "●"; color = $GREEN; text = "Kali Linux";   sub = "VirtualBox window" },
-    @{ icon = "●"; color = $GREEN; text = "AI Validator"; sub = "http://localhost:5000" }
+    @{ color = $GREEN; text = "Kali Linux";   sub = "VirtualBox window" },
+    @{ color = $GREEN; text = "AI Validator"; sub = "http://localhost:5000" }
 )) {
     $dot = New-Object System.Windows.Forms.Label
-    $dot.Text = $row.icon; $dot.ForeColor = $row.color; $dot.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+    $dot.Text = "●"; $dot.ForeColor = $row.color; $dot.Font = New-Object System.Drawing.Font("Segoe UI", 8)
     $dot.Location = New-Object System.Drawing.Point(20, $y); $dot.Size = New-Object System.Drawing.Size(14, 18)
     $readyForm.Controls.Add($dot)
 
@@ -683,9 +705,23 @@ $rInfo.ForeColor = $MUTED; $rInfo.Font = New-Object System.Drawing.Font("Segoe U
 $rInfo.Location = New-Object System.Drawing.Point(20, 212); $rInfo.Size = New-Object System.Drawing.Size(440, 16)
 $readyForm.Controls.Add($rInfo)
 
+# Recheck button
+$rRecheck = New-Object System.Windows.Forms.Button
+$rRecheck.Text = "Recheck Wazuh"; $rRecheck.BackColor = $SURFACE2; $rRecheck.ForeColor = $MUTED
+$rRecheck.FlatStyle = "Flat"; $rRecheck.FlatAppearance.BorderSize = 0
+$rRecheck.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$rRecheck.Location = New-Object System.Drawing.Point(220, 204); $rRecheck.Size = New-Object System.Drawing.Size(126, 32)
+$rRecheck.Add_Click({
+    $ok = Test-WazuhReady
+    $wazuhDot.ForeColor    = if ($ok) { $GREEN } else { $YELLOW }
+    $wazuhSubLbl.Text      = "https://$WAZUH_IP  (admin / WazuhLab123*)$(if (-not $ok) { '  — API still starting' } else { '' })"
+    [System.Windows.Forms.Application]::DoEvents()
+})
+$readyForm.Controls.Add($rRecheck)
+
 # Close button
 $rBtn = New-Object System.Windows.Forms.Button
-$rBtn.Text = "Close"; $rBtn.BackColor = $SURFACE2; $rBtn.ForeColor = $TEXT
+$rBtn.Text = "Close"; $rBtn.BackColor = $ACCENT; $rBtn.ForeColor = [System.Drawing.Color]::White
 $rBtn.FlatStyle = "Flat"; $rBtn.FlatAppearance.BorderSize = 0
 $rBtn.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 $rBtn.Location = New-Object System.Drawing.Point(356, 204); $rBtn.Size = New-Object System.Drawing.Size(100, 32)

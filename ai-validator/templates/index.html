@@ -44,7 +44,10 @@
       </div>
 
       <div class="form-group" id="wazuh-alerts-section" style="display:none;">
-        <label>Recent Wazuh Alerts</label>
+        <div class="alerts-label-row">
+          <label>Recent Wazuh Alerts</label>
+          <button class="btn-refresh" onclick="importFromWazuh()" title="Refresh alerts">↻</button>
+        </div>
         <div class="wazuh-alerts" id="wazuh-alerts-list"></div>
       </div>
 
