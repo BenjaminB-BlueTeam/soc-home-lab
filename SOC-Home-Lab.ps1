@@ -176,7 +176,7 @@ $script:pPct   = $null
 $script:pTrack = $null
 
 function Show-InstallChecklist($choices) {
-    $STEP_H = 58; $STEP_X = 16; $STEP_W = 512
+    $STEP_H = 58; $STEP_X = 16; $STEP_W = 560
 
     $steps = [System.Collections.ArrayList]@()
     $steps.Add("python")    | Out-Null
@@ -199,7 +199,7 @@ function Show-InstallChecklist($choices) {
 
     $formH = 68 + ($steps.Count * ($STEP_H + 8)) + 30
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "SOC Home Lab"; $form.Size = New-Object System.Drawing.Size(548, $formH)
+    $form.Text = "SOC Home Lab"; $form.Size = New-Object System.Drawing.Size(596, $formH)
     $form.StartPosition = "CenterScreen"; $form.BackColor = $BG; $form.ForeColor = $TEXT
     $form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $form.FormBorderStyle = "FixedSingle"; $form.MaximizeBox = $false; $form.MinimizeBox = $false
@@ -207,7 +207,7 @@ function Show-InstallChecklist($choices) {
 
     $hdr = New-Object System.Windows.Forms.Panel
     $hdr.BackColor = $SURFACE; $hdr.Location = New-Object System.Drawing.Point(0,0)
-    $hdr.Size = New-Object System.Drawing.Size(548, 52); $form.Controls.Add($hdr)
+    $hdr.Size = New-Object System.Drawing.Size(596, 52); $form.Controls.Add($hdr)
     $hIco = New-Object System.Windows.Forms.Panel
     $hIco.BackColor = $ACCENT; $hIco.Location = New-Object System.Drawing.Point(16,16); $hIco.Size = New-Object System.Drawing.Size(20,20); $hdr.Controls.Add($hIco)
     $hLbl = New-Object System.Windows.Forms.Label
@@ -231,19 +231,19 @@ function Show-InstallChecklist($choices) {
 
         $st = New-Object System.Windows.Forms.Label
         $st.Text = "Waiting..."; $st.ForeColor = $MUTED; $st.Font = New-Object System.Drawing.Font("Segoe UI",8)
-        $st.Location = New-Object System.Drawing.Point(42,30); $st.Size = New-Object System.Drawing.Size(240,16); $p.Controls.Add($st)
+        $st.Location = New-Object System.Drawing.Point(42,30); $st.Size = New-Object System.Drawing.Size(190,16); $p.Controls.Add($st)
 
         $ob = New-Object System.Windows.Forms.Button
         $ob.Text = "Open download page"; $ob.BackColor = $ACCENT; $ob.ForeColor = [System.Drawing.Color]::White
         $ob.FlatStyle = "Flat"; $ob.FlatAppearance.BorderSize = 0; $ob.UseVisualStyleBackColor = $false
         $ob.Font = New-Object System.Drawing.Font("Segoe UI",8)
-        $ob.Location = New-Object System.Drawing.Point(268,15); $ob.Size = New-Object System.Drawing.Size(130,26); $ob.Visible = $false; $p.Controls.Add($ob)
+        $ob.Location = New-Object System.Drawing.Point(242,15); $ob.Size = New-Object System.Drawing.Size(160,26); $ob.Visible = $false; $p.Controls.Add($ob)
 
         $db = New-Object System.Windows.Forms.Button
-        $db.Text = "Imported  ✓"; $db.BackColor = $GREEN; $db.ForeColor = [System.Drawing.Color]::White
+        $db.Text = "Done  ✓"; $db.BackColor = $GREEN; $db.ForeColor = [System.Drawing.Color]::White
         $db.FlatStyle = "Flat"; $db.FlatAppearance.BorderSize = 0; $db.UseVisualStyleBackColor = $false
         $db.Font = New-Object System.Drawing.Font("Segoe UI",8,[System.Drawing.FontStyle]::Bold)
-        $db.Location = New-Object System.Drawing.Point(406,15); $db.Size = New-Object System.Drawing.Size(96,26); $db.Visible = $false; $db.Enabled = $false; $p.Controls.Add($db)
+        $db.Location = New-Object System.Drawing.Point(410,15); $db.Size = New-Object System.Drawing.Size(86,26); $db.Visible = $false; $db.Enabled = $false; $p.Controls.Add($db)
 
         $form.Controls.Add($p)
         $stepControls[$key] = @{ icon=$ico; status=$st; openBtn=$ob; doneBtn=$db }
@@ -270,7 +270,7 @@ function Show-InstallChecklist($choices) {
     }
     function Step-Manual($k,$url) {
         $stepControls[$k].icon.Text = "→"; $stepControls[$k].icon.ForeColor = $ACCENT
-        $stepControls[$k].status.Text = "Download, import in VirtualBox, then click Done"
+        $stepControls[$k].status.Text = "Download & import, then click Done →"
         $stepControls[$k].status.ForeColor = $TEXT
         $stepControls[$k].openBtn.Visible = $true; $stepControls[$k].openBtn.Enabled = $true
         $stepControls[$k].doneBtn.Visible = $true
