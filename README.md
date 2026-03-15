@@ -15,11 +15,11 @@ Practice real SOC analyst workflows: detect attacks with Wazuh, investigate aler
 
 ### Setup Wizard
 ![Setup Wizard](docs/screenshots/wizard.png)
-*Discord-themed Windows Forms wizard — collects AI provider, API key, and confirms prerequisites before launching.*
+*Setup wizard — collects AI provider, API key, and confirms prerequisites before launching.*
 
 ### Launch Progress
 ![Launch Progress](docs/screenshots/progress.png)
-*Persistent progress window with blurple progress bar — tracks each step of VM startup and health checks.*
+*Persistent progress window — tracks each step of VM startup and health checks.*
 
 ### Ready Dialog
 ![Ready Dialog](docs/screenshots/ready.png)
@@ -27,7 +27,7 @@ Practice real SOC analyst workflows: detect attacks with Wazuh, investigate aler
 
 ### AI Validator
 ![AI Validator](docs/screenshots/validator.png)
-*Discord dark theme UI — real Wazuh alerts auto-imported and tagged NETWORK (Suricata) or HOST (OS/auth). Click any alert to pre-fill the report template.*
+*Real Wazuh alerts auto-imported and tagged NETWORK (Suricata) or HOST (OS/auth). Click any alert to pre-fill the report template.*
 
 ---
 
@@ -121,15 +121,15 @@ Submit a report and get:
 ### Keyboard layout auto-detection
 At launch, the wizard reads the Windows system locale (`Get-Culture`) and applies the corresponding X11 keyboard layout to Kali via SSH (`localectl set-x11-keymap`). Supports fr, de, es, it, pt, ru, and more — falls back to `us` if unrecognized.
 
-### Discord dark theme throughout
-Both the web UI and all Windows Forms dialogs (wizard, progress, ready) use the Discord design system:
+### Consistent dark theme throughout
+Both the web UI and all Windows Forms dialogs (wizard, progress, ready) share the same color palette:
 
 | Role | Hex |
 |---|---|
 | Background | `#313338` |
 | Surface | `#2B2D31` |
 | Deep surface | `#1E1F22` |
-| Accent (blurple) | `#5865F2` |
+| Accent | `#5865F2` |
 
 ---
 
@@ -183,7 +183,7 @@ Each scenario has a matching report template in the AI Validator (selectable via
 | Real alert source | OpenSearch via SSH tunnel | — |
 | Network IDS | Suricata | 7.0.13 |
 | AI Validator backend | Flask + Claude / OpenAI | Python 3.x |
-| AI Validator frontend | Vanilla JS + Discord CSS | — |
+| AI Validator frontend | Vanilla JS + CSS | — |
 | Hypervisor | VirtualBox | 7.x |
 | Launcher / setup | PowerShell 7 + Windows Forms | — |
 | Distribution | PS2EXE (exe compilation) | — |
@@ -211,7 +211,7 @@ soc-home-lab/
     ├── .env                # Your local config (not committed)
     ├── reports_history.json
     ├── static/
-    │   ├── css/style.css   # Discord dark theme
+    │   ├── css/style.css   # Dark theme
     │   └── js/app.js       # Auto-import, silent refresh, NETWORK/HOST tagging
     └── templates/
         └── index.html
