@@ -170,10 +170,10 @@ function Init-ProgressForm {
     $hdr.Size      = New-Object System.Drawing.Size(500, 46)
     $script:pForm.Controls.Add($hdr)
 
-    $ico = New-Object System.Windows.Forms.Label
-    $ico.Text     = "🛡️"; $ico.Font = New-Object System.Drawing.Font("Segoe UI", 13)
-    $ico.Location = New-Object System.Drawing.Point(16, 10); $ico.Size = New-Object System.Drawing.Size(28, 26)
-    $ico.ForeColor = $ACCENT; $hdr.Controls.Add($ico)
+    $ico = New-Object System.Windows.Forms.Panel
+    $ico.BackColor = $ACCENT
+    $ico.Location  = New-Object System.Drawing.Point(16, 13); $ico.Size = New-Object System.Drawing.Size(20, 20)
+    $hdr.Controls.Add($ico)
 
     $ttl = New-Object System.Windows.Forms.Label
     $ttl.Text      = "SOC Home Lab"
@@ -256,9 +256,13 @@ function Show-Wizard {
     $form.MaximizeBox     = $false
 
     # Title
+    $icoW = New-Object System.Windows.Forms.Panel
+    $icoW.BackColor = $ACCENT
+    $icoW.Location  = New-Object System.Drawing.Point(24, 22); $icoW.Size = New-Object System.Drawing.Size(24, 24)
+    $form.Controls.Add($icoW)
     $lbl = New-Object System.Windows.Forms.Label
-    $lbl.Text = "🛡️  SOC Home Lab"; $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)
-    $lbl.ForeColor = $ACCENT; $lbl.Location = New-Object System.Drawing.Point(24, 18); $lbl.Size = New-Object System.Drawing.Size(520, 34)
+    $lbl.Text = "SOC Home Lab"; $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 16, [System.Drawing.FontStyle]::Bold)
+    $lbl.ForeColor = $ACCENT; $lbl.Location = New-Object System.Drawing.Point(56, 18); $lbl.Size = New-Object System.Drawing.Size(490, 34)
     $form.Controls.Add($lbl)
     $sub = New-Object System.Windows.Forms.Label
     $sub.Text = "Cybersecurity training environment — automatic setup & launcher"
@@ -634,9 +638,9 @@ $rHdr = New-Object System.Windows.Forms.Panel
 $rHdr.BackColor = $SURFACE; $rHdr.Location = New-Object System.Drawing.Point(0, 0); $rHdr.Size = New-Object System.Drawing.Size(480, 52)
 $readyForm.Controls.Add($rHdr)
 
-$rIco = New-Object System.Windows.Forms.Label
-$rIco.Text = "🛡️"; $rIco.Font = New-Object System.Drawing.Font("Segoe UI", 14)
-$rIco.ForeColor = $ACCENT; $rIco.Location = New-Object System.Drawing.Point(16, 12); $rIco.Size = New-Object System.Drawing.Size(30, 28)
+$rIco = New-Object System.Windows.Forms.Panel
+$rIco.BackColor = $ACCENT
+$rIco.Location  = New-Object System.Drawing.Point(16, 15); $rIco.Size = New-Object System.Drawing.Size(22, 22)
 $rHdr.Controls.Add($rIco)
 
 $rTitle = New-Object System.Windows.Forms.Label
