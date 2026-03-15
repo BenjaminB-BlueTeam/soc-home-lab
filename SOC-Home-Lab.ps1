@@ -15,7 +15,7 @@ $ROOT = if ($PSScriptRoot) {
 $CONFIG_FILE   = "$ROOT\config.ini"
 $VALIDATOR_DIR = "$ROOT\ai-validator"
 $VBOX_DEFAULT  = "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
-$WAZUH_OVA_URL = "https://packages.wazuh.com/4.x/virtual-machine/wazuh-4.14.3.ova"
+$WAZUH_OVA_URL = "https://documentation.wazuh.com/current/deployment-options/virtual-machine/virtual-machine.html"
 $WAZUH_IP      = "192.168.56.101"
 
 # ── Palette — Discord dark theme ─────────────────────────────
@@ -186,8 +186,9 @@ function Init-ProgressForm {
     $script:pForm.FormBorderStyle = "FixedSingle"
     $script:pForm.MaximizeBox     = $false
     $script:pForm.MinimizeBox     = $false
-    $script:pForm.ControlBox      = $false
+    $script:pForm.ControlBox      = $true
     $script:pForm.TopMost         = $true
+    $script:pForm.Add_FormClosing({ [System.Environment]::Exit(0) })
 
     # Header strip
     $hdr = New-Object System.Windows.Forms.Panel
