@@ -400,7 +400,7 @@ function Show-Wizard {
     $btn.ForeColor = [System.Drawing.Color]::White
     $btn.FlatStyle = "Flat"; $btn.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $btn.FlatAppearance.BorderSize = 0; $btn.UseVisualStyleBackColor = $false
-    $btn.Location = New-Object System.Drawing.Point(396, 484); $btn.Size = New-Object System.Drawing.Size(148, 36)
+    $btn.Location = New-Object System.Drawing.Point(24, 484); $btn.Size = New-Object System.Drawing.Size(520, 36)
     $btn.Add_Click({
         if ($txtKey.Text.Trim().Length -lt 10) { $lblStatus.Text = "Please enter a valid API key."; return }
         $form.DialogResult = "OK"; $form.Close()
