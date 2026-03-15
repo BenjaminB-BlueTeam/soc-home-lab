@@ -273,7 +273,7 @@ function Show-Wizard {
     # ── Form
     $form = New-Object System.Windows.Forms.Form
     $form.Text            = "SOC Home Lab"
-    $form.Size            = New-Object System.Drawing.Size(580, 640)
+    $form.Size            = New-Object System.Drawing.Size(580, 660)
     $form.StartPosition   = "CenterScreen"
     $form.BackColor       = $BG
     $form.ForeColor       = $TEXT
@@ -384,7 +384,7 @@ function Show-Wizard {
 
     # Privacy notice
     $notice = New-Object System.Windows.Forms.Label
-    $notice.Text = "🔒  Your API key is saved only in the local .env file on this machine. It is never shared externally."
+    $notice.Text = "[secured]  Your API key is saved only in the local .env file on this machine. It is never shared externally."
     $notice.ForeColor = $SAFE; $notice.Location = New-Object System.Drawing.Point(24, 446); $notice.Size = New-Object System.Drawing.Size(520, 18)
     $form.Controls.Add($notice)
 
@@ -392,7 +392,7 @@ function Show-Wizard {
 
     # Status + button
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.ForeColor = $RED; $lblStatus.BackColor = $BG; $lblStatus.Location = New-Object System.Drawing.Point(24, 492); $lblStatus.Size = New-Object System.Drawing.Size(340, 18)
+    $lblStatus.ForeColor = $RED; $lblStatus.BackColor = $BG; $lblStatus.Location = New-Object System.Drawing.Point(24, 528); $lblStatus.Size = New-Object System.Drawing.Size(520, 18)
     $form.Controls.Add($lblStatus)
 
     $btn = New-Object System.Windows.Forms.Button
