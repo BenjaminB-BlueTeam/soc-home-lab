@@ -138,6 +138,16 @@ function Get-X11Layout {
     return "us"
 }
 
+function Get-BrowserUserAgent {
+    try {
+        $progId = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice").ProgId
+        if ($progId -match "Chrome")  { return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" }
+        if ($progId -match "Firefox") { return "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0" }
+        if ($progId -match "Edge")    { return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0" }
+    } catch {}
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+}
+
 function Get-KaliIP($kaliVM) {
     try {
         $props = & $VBOX_DEFAULT guestproperty enumerate $kaliVM 2>$null
@@ -146,6 +156,16 @@ function Get-KaliIP($kaliVM) {
         }
     } catch {}
     return "192.168.56.102"
+}
+
+function Get-WazuhIP($wazuhVM) {
+    try {
+        $props = & $VBOX_DEFAULT guestproperty enumerate $wazuhVM 2>$null
+        foreach ($line in ($props -split "`n")) {
+            if ($line -match "Net/\d+/V4/IP\s.*=\s+'(192\.168\.56\.\d+)'") { return $matches[1] }
+        }
+    } catch {}
+    return $WAZUH_IP   # fall back to current value
 }
 
 $script:pForm  = $null
@@ -434,7 +454,9 @@ Set-Location $VALIDATOR_DIR
 if ($choices.installWazuh) {
     $step++; $ovaPath = "$env:TEMP\wazuh-4.14.3.ova"
     Show-Progress ([math]::Round($step/$total*35)) "Downloading Wazuh OVA..." "~3.5 GB — please wait"
-    if (-not (Test-Path $ovaPath)) { (New-Object System.Net.WebClient).DownloadFile($WAZUH_OVA_URL, $ovaPath) }
+    if (-not (Test-Path $ovaPath)) {
+        Invoke-WebRequest -Uri $WAZUH_OVA_URL -OutFile $ovaPath -UserAgent (Get-BrowserUserAgent) -UseBasicParsing
+    }
     Show-Progress ([math]::Round($step/$total*40)) "Importing Wazuh VM..." "Configuring 4096 MB RAM"
     & $VBOX_DEFAULT import $ovaPath --vsys 0 --memory 4096 2>$null
     $choices.wazuhVM = Find-WazuhVM
@@ -493,36 +515,47 @@ $KALI_VM  = $cfg.kali_vm_name
 # ── LAUNCH ────────────────────────────────────────────────────
 
 $running      = & $VBOX_DEFAULT list runningvms 2>$null
-$wazuhRunning = [bool]($running -match [regex]::Escape($WAZUH_VM))
-$kaliRunning  = [bool]($running -match [regex]::Escape($KALI_VM))
+$wazuhRunning = [bool]($WAZUH_VM -and ($running -match [regex]::Escape($WAZUH_VM)))
+$kaliRunning  = [bool]($KALI_VM  -and ($running -match [regex]::Escape($KALI_VM)))
 
 # Start Wazuh
-if ($wazuhRunning) {
-    Show-Progress 62 "Wazuh already running — skipping boot..." "Checking API health"
-} else {
-    Show-Progress 62 "Starting Wazuh SIEM (headless)..." "Launching VM"
-    & $VBOX_DEFAULT startvm $WAZUH_VM --type headless 2>$null
-    $bootTime = 90
-    for ($i = 1; $i -le $bootTime; $i++) {
-        $pct = 62 + [math]::Round(14 * $i / $bootTime)
-        Show-Progress $pct "Wazuh booting... ($i/$bootTime s)" "Starting indexer, manager and dashboard"
-        Start-Sleep 1
+if ($WAZUH_VM) {
+    if ($wazuhRunning) {
+        Show-Progress 62 "Wazuh already running — skipping boot..." "Checking API health"
+    } else {
+        Show-Progress 62 "Starting Wazuh SIEM (headless)..." "Launching VM"
+        & $VBOX_DEFAULT startvm $WAZUH_VM --type headless 2>$null
+        $bootTime = 90
+        for ($i = 1; $i -le $bootTime; $i++) {
+            $pct = 62 + [math]::Round(14 * $i / $bootTime)
+            Show-Progress $pct "Wazuh booting... ($i/$bootTime s)" "Starting indexer, manager and dashboard"
+            Start-Sleep 1
+        }
     }
-}
 
-# Poll until both API (55000) and OpenSearch (9200) are ready — up to 3 min
-Show-Progress 78 "Waiting for Wazuh services..." "API :55000 + OpenSearch :9200"
-for ($t = 0; $t -lt 180; $t += 5) {
-    if (Test-WazuhReady) { break }
-    $pct = [int](78 + ($t / 180) * 2)
-    Show-Progress $pct "Waiting for Wazuh services... ($t/180 s)" "API + OpenSearch starting"
-    Start-Sleep 5
-}
+    # Resolve Wazuh's actual IP via VBoxManage guestproperty (handles DHCP changes)
+    $detectedIP = Get-WazuhIP $WAZUH_VM
+    if ($detectedIP -ne $WAZUH_IP) {
+        $WAZUH_IP = $detectedIP
+        (Get-Content "$VALIDATOR_DIR\.env") -replace "^WAZUH_HOST=.*", "WAZUH_HOST=$WAZUH_IP" |
+            Set-Content "$VALIDATOR_DIR\.env" -Encoding UTF8
+        (Get-Content $CONFIG_FILE) -replace "^wazuh_ip=.*", "wazuh_ip=$WAZUH_IP" |
+            Set-Content $CONFIG_FILE -Encoding UTF8
+    }
 
-# Auto-repair if still not ready
-if (-not (Test-WazuhReady)) {
-    Show-Progress 80 "Wazuh API not responding — attempting repair..." "Restarting services via SSH"
-    $repairScript = @"
+    # Poll until both API (55000) and OpenSearch (9200) are ready — up to 3 min
+    Show-Progress 78 "Waiting for Wazuh services..." "API :55000 + OpenSearch :9200"
+    for ($t = 0; $t -lt 180; $t += 5) {
+        if (Test-WazuhReady) { break }
+        $pct = [int](78 + ($t / 180) * 2)
+        Show-Progress $pct "Waiting for Wazuh services... ($t/180 s)" "API + OpenSearch starting"
+        Start-Sleep 5
+    }
+
+    # Auto-repair if still not ready
+    if (-not (Test-WazuhReady)) {
+        Show-Progress 80 "Wazuh API not responding — attempting repair..." "Restarting services via SSH"
+        $repairScript = @"
 import paramiko, sys
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -538,29 +571,36 @@ try:
 except Exception as e:
     print(f'SKIP: {e}')
 "@
-    $tmp = [System.IO.Path]::GetTempFileName() + ".py"
-    $repairScript | Set-Content $tmp -Encoding UTF8
-    $repairResult = & $PYTHON $tmp 2>&1
-    Remove-Item $tmp -ErrorAction SilentlyContinue
+        $tmp = [System.IO.Path]::GetTempFileName() + ".py"
+        $repairScript | Set-Content $tmp -Encoding UTF8
+        $repairResult = & $PYTHON $tmp 2>&1
+        Remove-Item $tmp -ErrorAction SilentlyContinue
 
-    if ("$repairResult" -match "RESTARTED") {
-        for ($t = 0; $t -lt 60; $t += 5) {
-            Show-Progress 82 "Services restarted — waiting for API... ($t/60 s)" ""
-            if (Test-WazuhReady) { break }
-            Start-Sleep 5
+        if ("$repairResult" -match "RESTARTED") {
+            for ($t = 0; $t -lt 60; $t += 5) {
+                Show-Progress 82 "Services restarted — waiting for API... ($t/60 s)" ""
+                if (Test-WazuhReady) { break }
+                Start-Sleep 5
+            }
         }
     }
+} else {
+    Show-Progress 78 "No Wazuh VM configured — skipping..." "Use the wizard to download and import Wazuh"
 }
 
-$wazuhOK = Test-WazuhReady
+$wazuhOK = if ($WAZUH_VM) { Test-WazuhReady } else { $false }
 
 # Start Kali
-if ($kaliRunning) {
-    Show-Progress 88 "Kali Linux already running — skipping..." ""
+if ($KALI_VM) {
+    if ($kaliRunning) {
+        Show-Progress 88 "Kali Linux already running — skipping..." ""
+    } else {
+        Show-Progress 88 "Starting Kali Linux..." "GUI mode"
+        & $VBOX_DEFAULT startvm $KALI_VM --type gui 2>$null
+        Start-Sleep 5
+    }
 } else {
-    Show-Progress 88 "Starting Kali Linux..." "GUI mode"
-    & $VBOX_DEFAULT startvm $KALI_VM --type gui 2>$null
-    Start-Sleep 5
+    Show-Progress 88 "No Kali VM configured — skipping..." ""
 }
 
 # Configure Kali — keyboard layout + SSH auto-start
