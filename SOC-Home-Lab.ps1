@@ -434,7 +434,7 @@ $step  = 0
 # Install Python
 if ($choices.installPython) {
     $step++; Show-Progress ([math]::Round($step/$total*25)) "Installing Python 3..." "via winget — may take a few minutes"
-    winget install --id Python.Python.3.13 --silent --accept-package-agreements --accept-source-agreements
+    Start-Process winget -ArgumentList "install --id Python.Python.3.13 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     $PYTHON = Find-Python
 }
@@ -442,7 +442,7 @@ if ($choices.installPython) {
 # Install VirtualBox
 if ($choices.installVBox) {
     $step++; Show-Progress ([math]::Round($step/$total*25)) "Installing VirtualBox..." "via winget — may take a few minutes"
-    winget install --id Oracle.VirtualBox --silent --accept-package-agreements --accept-source-agreements
+    Start-Process winget -ArgumentList "install --id Oracle.VirtualBox --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 
