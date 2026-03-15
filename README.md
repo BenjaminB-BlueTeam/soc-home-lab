@@ -13,21 +13,31 @@ Practice real SOC analyst workflows: detect attacks with Wazuh, investigate aler
 
 ## Screenshots
 
-### Setup Wizard
-![Setup Wizard](docs/screenshots/wizard.png)
-*Setup wizard — collects AI provider, API key, and confirms prerequisites before launching.*
+<p align="center">
+  <img src="docs/screenshots/wizard.png" alt="Setup Wizard" width="600"><br><br>
+  <em>Setup wizard — collects AI provider, API key, and confirms prerequisites before launching.</em>
+</p>
 
-### Launch Progress
-![Launch Progress](docs/screenshots/progress.png)
-*Persistent progress window — tracks each step of VM startup and health checks.*
+<br>
 
-### Ready Dialog
-![Ready Dialog](docs/screenshots/ready.png)
-*Confirmation dialog showing Wazuh, Kali, and AI Validator status before opening the browser.*
+<p align="center">
+  <img src="docs/screenshots/progress.png" alt="Launch Progress" width="600"><br><br>
+  <em>Persistent progress window — tracks each step of VM startup and health checks.</em>
+</p>
 
-### AI Validator
-![AI Validator](docs/screenshots/validator.png)
-*Real Wazuh alerts auto-imported and tagged NETWORK (Suricata) or HOST (OS/auth). Click any alert to pre-fill the report template.*
+<br>
+
+<p align="center">
+  <img src="docs/screenshots/ready.png" alt="Ready Dialog" width="600"><br><br>
+  <em>Confirmation dialog showing Wazuh, Kali, and AI Validator status before opening the browser.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/screenshots/validator.png" alt="AI Validator" width="900"><br><br>
+  <em>Real Wazuh alerts auto-imported and tagged NETWORK (Suricata) or HOST (OS/auth). Click any alert to pre-fill the report template.</em>
+</p>
 
 ---
 
