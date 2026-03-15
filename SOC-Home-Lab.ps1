@@ -392,7 +392,7 @@ function Show-Wizard {
 
     # Status + button
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.ForeColor = $RED; $lblStatus.Location = New-Object System.Drawing.Point(24, 484); $lblStatus.Size = New-Object System.Drawing.Size(380, 18)
+    $lblStatus.ForeColor = $RED; $lblStatus.Location = New-Object System.Drawing.Point(24, 484); $lblStatus.Size = New-Object System.Drawing.Size(360, 18)
     $form.Controls.Add($lblStatus)
 
     $btn = New-Object System.Windows.Forms.Button
@@ -455,7 +455,14 @@ if ($choices.installWazuh) {
     $step++; $ovaPath = "$env:TEMP\wazuh-4.14.3.ova"
     Show-Progress ([math]::Round($step/$total*35)) "Downloading Wazuh OVA..." "~3.5 GB — please wait"
     if (-not (Test-Path $ovaPath)) {
-        Invoke-WebRequest -Uri $WAZUH_OVA_URL -OutFile $ovaPath -UserAgent (Get-BrowserUserAgent) -UseBasicParsing
+        $headers = @{
+            "Accept"          = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            "Accept-Language" = "en-US,en;q=0.5"
+            "Accept-Encoding" = "gzip, deflate, br"
+            "Connection"      = "keep-alive"
+            "Upgrade-Insecure-Requests" = "1"
+        }
+        Invoke-WebRequest -Uri $WAZUH_OVA_URL -OutFile $ovaPath -UserAgent (Get-BrowserUserAgent) -Headers $headers -UseBasicParsing
     }
     Show-Progress ([math]::Round($step/$total*40)) "Importing Wazuh VM..." "Configuring 4096 MB RAM"
     & $VBOX_DEFAULT import $ovaPath --vsys 0 --memory 4096 2>$null
