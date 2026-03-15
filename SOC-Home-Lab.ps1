@@ -179,9 +179,9 @@ function Show-InstallChecklist($choices) {
     $STEP_H = 58; $STEP_X = 16; $STEP_W = 512
 
     $steps = [System.Collections.ArrayList]@()
-    if ($choices.installPython) { $steps.Add("python")    | Out-Null }
-    if ($choices.installVBox)   { $steps.Add("vbox")      | Out-Null }
-    $steps.Add("pip") | Out-Null
+    $steps.Add("python")    | Out-Null
+    $steps.Add("vbox")      | Out-Null
+    $steps.Add("pip")       | Out-Null
     if ($choices.installWazuh)  { $steps.Add("wazuh")     | Out-Null }
     if ($choices.installKali)   { $steps.Add("kali")      | Out-Null }
     if ($choices.installWazuh -or $choices.installKali) { $steps.Add("configure") | Out-Null }
@@ -274,7 +274,9 @@ function Show-InstallChecklist($choices) {
         $stepControls[$k].status.ForeColor = $TEXT
         $stepControls[$k].openBtn.Visible = $true; $stepControls[$k].openBtn.Enabled = $true
         $stepControls[$k].doneBtn.Visible = $true
-        $c = $stepControls[$k]; $c.openBtn.Add_Click({ Start-Process $url; $c.doneBtn.Enabled = $true })
+        $script:_manualUrl  = $url
+        $script:_manualDone = $stepControls[$k].doneBtn
+        $stepControls[$k].openBtn.Add_Click({ Start-Process $script:_manualUrl; $script:_manualDone.Enabled = $true })
         [System.Windows.Forms.Application]::DoEvents()
     }
     function Prog($n,$t) { $progBar.Width = [int]($STEP_W * $n / $t); [System.Windows.Forms.Application]::DoEvents() }
@@ -282,19 +284,21 @@ function Show-InstallChecklist($choices) {
     $form.Show(); [System.Windows.Forms.Application]::DoEvents()
     $done = 0; $total = $steps.Count
 
-    if ($steps.Contains("python")) {
+    if ($choices.installPython) {
         Step-Running "python" "Installing via winget..."
         Start-Process winget -ArgumentList "install --id Python.Python.3.13 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        $script:PYTHON = Find-Python; $done++; Prog $done $total; Step-Done "python" "Python 3 installed"
-    }
+        $script:PYTHON = Find-Python; Step-Done "python" "Python 3 installed"
+    } else { Step-Done "python" "Already installed" }
+    $done++; Prog $done $total
 
-    if ($steps.Contains("vbox")) {
+    if ($choices.installVBox) {
         Step-Running "vbox" "Installing via winget..."
         Start-Process winget -ArgumentList "install --id Oracle.VirtualBox --silent --disable-interactivity --accept-package-agreements --accept-source-agreements" -WindowStyle Hidden -Wait
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        $done++; Prog $done $total; Step-Done "vbox" "VirtualBox installed"
-    }
+        Step-Done "vbox" "VirtualBox installed"
+    } else { Step-Done "vbox" "Already installed" }
+    $done++; Prog $done $total
 
     Step-Running "pip" "Installing flask, anthropic, openai, paramiko..."
     Set-Location $VALIDATOR_DIR
