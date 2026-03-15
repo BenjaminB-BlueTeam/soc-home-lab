@@ -23,7 +23,7 @@ Invoke-PS2EXE `
     -Description "Cybersecurity training environment — setup and launcher" `
     -Version     "1.0.0" `
     -Company     "SOC Home Lab" `
-    -NoConsole:$false
+    -NoConsole
 
 if (Test-Path $out) {
     $size = [math]::Round((Get-Item $out).Length / 1KB)

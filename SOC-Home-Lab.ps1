@@ -6,7 +6,12 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$ROOT          = $PSScriptRoot
+# PSScriptRoot is empty when running as a compiled .exe — fall back to the exe's own directory
+$ROOT = if ($PSScriptRoot) {
+    $PSScriptRoot
+} else {
+    Split-Path ([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) -Parent
+}
 $CONFIG_FILE   = "$ROOT\config.ini"
 $VALIDATOR_DIR = "$ROOT\ai-validator"
 $VBOX_DEFAULT  = "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
@@ -330,7 +335,7 @@ function Show-Wizard {
     $txtKey = New-Object System.Windows.Forms.TextBox
     $txtKey.Location = New-Object System.Drawing.Point(24, 388); $txtKey.Size = New-Object System.Drawing.Size(520, 26)
     $txtKey.BackColor = $SURFACE2; $txtKey.ForeColor = $TEXT; $txtKey.BorderStyle = "FixedSingle"
-    $txtKey.PasswordChar = "●"; $txtKey.PlaceholderText = "sk-ant-..."
+    $txtKey.PasswordChar = "●"
     $form.Controls.Add($txtKey)
 
     # Pre-fill from existing .env
@@ -344,8 +349,6 @@ function Show-Wizard {
         if ($oKey -and $rOpenAI.Checked) { $txtKey.Text = $oKey }
     }
 
-    $rClaude.Add_CheckedChanged({ if ($rClaude.Checked) { $txtKey.PlaceholderText = "sk-ant-..." } })
-    $rOpenAI.Add_CheckedChanged({ if ($rOpenAI.Checked) { $txtKey.PlaceholderText = "sk-..."     } })
 
     # Links
     $lnkClaude = New-Object System.Windows.Forms.LinkLabel
@@ -510,7 +513,8 @@ if ($wazuhRunning) {
 Show-Progress 78 "Waiting for Wazuh API on port 55000..." "Polling every 5 seconds"
 for ($t = 0; $t -lt 90; $t += 5) {
     if (Test-WazuhReady) { break }
-    Show-Progress 78 "Waiting for Wazuh API... ($t/90 s)" "Services still starting up"
+    $pct = [int](78 + ($t / 90) * 2)
+    Show-Progress $pct "Waiting for Wazuh API... ($t/90 s)" "Services still starting up"
     Start-Sleep 5
 }
 
