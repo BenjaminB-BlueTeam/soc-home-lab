@@ -327,7 +327,7 @@ function Show-Wizard {
     Title "SYSTEM CHECK" 84
     $chkPython = StatusRow "Python 3"   $hasPython "Install Python automatically via winget"            106
     $chkVBox   = StatusRow "VirtualBox" $hasVBox   "Install VirtualBox automatically via winget"        150
-    $chkWazuh  = StatusRow "Wazuh SIEM" ([bool]$wazuhVM) "Download & import Wazuh OVA (~3.5 GB)"       194
+    $chkWazuh  = StatusRow "Wazuh SIEM" ([bool]$wazuhVM) "Open Wazuh download page (OVA ~3.5 GB)"       194
     $chkKali   = StatusRow "Kali Linux" ([bool]$kaliVM)  "Open Kali download page (VirtualBox image)"   238
     Sep 284
 
@@ -452,20 +452,10 @@ Set-Location $VALIDATOR_DIR
 
 # Download & import Wazuh
 if ($choices.installWazuh) {
-    $step++; $ovaPath = "$env:TEMP\wazuh-4.14.3.ova"
-    Show-Progress ([math]::Round($step/$total*35)) "Downloading Wazuh OVA..." "~3.5 GB — please wait"
-    if (-not (Test-Path $ovaPath)) {
-        $headers = @{
-            "Accept"          = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-            "Accept-Language" = "en-US,en;q=0.5"
-            "Accept-Encoding" = "gzip, deflate, br"
-            "Connection"      = "keep-alive"
-            "Upgrade-Insecure-Requests" = "1"
-        }
-        Invoke-WebRequest -Uri $WAZUH_OVA_URL -OutFile $ovaPath -UserAgent (Get-BrowserUserAgent) -Headers $headers -UseBasicParsing
-    }
-    Show-Progress ([math]::Round($step/$total*40)) "Importing Wazuh VM..." "Configuring 4096 MB RAM"
-    & $VBOX_DEFAULT import $ovaPath --vsys 0 --memory 4096 2>$null
+    $step++
+    Start-Process $WAZUH_OVA_URL
+    Show-Progress ([math]::Round($step/$total*35)) "Opening Wazuh download page..." "Download the OVA (~3.5 GB), then import it in VirtualBox and press Enter"
+    Read-Host "Press Enter once Wazuh OVA is imported in VirtualBox"
     $choices.wazuhVM = Find-WazuhVM
 }
 
