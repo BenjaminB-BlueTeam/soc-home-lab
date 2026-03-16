@@ -1,0 +1,125 @@
+<!--
+  ═══════════════════════════════════════════════════════════════════
+  SOC Home Lab — Custom Wazuh Detection Rules
+  Fichier  : /var/ossec/etc/rules/local_rules.xml  (sur la VM Wazuh)
+  Range ID : 100001–100010
+  ═══════════════════════════════════════════════════════════════════
+
+  INSTALLATION :
+    1. Copier ce fichier dans /var/ossec/etc/rules/local_rules.xml
+    2. Vérifier la syntaxe : /var/ossec/bin/wazuh-logtest
+    3. Redémarrer Wazuh   : systemctl restart wazuh-manager
+
+  CONCEPTS ILLUSTRÉS :
+    Règle 100001 — Fréquence    : déclencher après N occurrences dans une fenêtre de temps
+    Règle 100002 — Surcharge    : remonter le niveau d'une règle existante via if_sid
+    Règle 100003 — Groupe/User  : corréler sur le même utilisateur avec if_matched_group
+  ═══════════════════════════════════════════════════════════════════
+-->
+
+<group name="custom,soc_homelab,">
+
+  <!--
+    ───────────────────────────────────────────────────────────────
+    RÈGLE 100001 — SSH Brute Force (seuil personnalisé)
+    ───────────────────────────────────────────────────────────────
+    CONCEPT : Règle de fréquence (frequency + timeframe)
+
+    Wazuh surveille les logs SSH et fait correspondre chaque tentative
+    avec un utilisateur inexistant à la règle parente 5710.
+    Cette règle fille se déclenche quand 5710 apparaît 5 fois en 30s
+    depuis la même IP source.
+
+    Comparaison avec la règle native Wazuh :
+      → Rule 5712 (défaut) : 8 tentatives en 120 secondes, level 10
+      → Rule 100001 (custom) : 5 tentatives en 30 secondes, level 12
+      On est plus sensible : on détecte un brute force lent ou distribué.
+
+    Champs clés :
+      frequency      = N occurrences de la règle parente avant déclenchement
+      timeframe      = fenêtre de temps en secondes
+      if_matched_sid = ID de la règle parente à surveiller
+      same_source_ip = la corrélation se fait par IP (même attaquant)
+
+    Script associé : attacks/03_ssh_brute_force.sh
+    ───────────────────────────────────────────────────────────────
+  -->
+  <rule id="100001" level="12" frequency="5" timeframe="30">
+    <if_matched_sid>5710</if_matched_sid>
+    <same_source_ip />
+    <description>SOC Lab — SSH brute force : 5 tentatives échouées en 30s depuis la même IP</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,brute_force,</group>
+  </rule>
+
+
+  <!--
+    ───────────────────────────────────────────────────────────────
+    RÈGLE 100002 — Création de compte local (criticité augmentée)
+    ───────────────────────────────────────────────────────────────
+    CONCEPT : Surcharge d'une règle existante (if_sid)
+
+    Wazuh a déjà une règle pour useradd (rule 5902, level 8).
+    Problème : level 8 peut passer inaperçu dans un dashboard chargé.
+    On crée une règle fille avec if_sid pour :
+      - Monter le level à 14 (critique, passe dans les alertes prioritaires)
+      - Ajouter le tag MITRE ATT&CK T1136.001
+      - L'intégrer dans notre groupe custom pour faciliter le filtrage
+
+    Champs clés :
+      if_sid = cette règle ne s'applique que si la règle 5902 a matché
+               (même log, même décodage — on hérite du contexte)
+      level  = override le level de la règle parente
+
+    Script associé : attacks/04_user_creation.sh
+    ───────────────────────────────────────────────────────────────
+  -->
+  <rule id="100002" level="14">
+    <if_sid>5902</if_sid>
+    <description>SOC Lab — Nouveau compte utilisateur créé sur le système</description>
+    <mitre>
+      <id>T1136.001</id>
+    </mitre>
+    <group>account_creation,high_relevance,</group>
+  </rule>
+
+
+  <!--
+    ───────────────────────────────────────────────────────────────
+    RÈGLE 100003 — Escalade locale : échecs d'auth répétés (même user)
+    ───────────────────────────────────────────────────────────────
+    CONCEPT : Fréquence sur groupe + corrélation par utilisateur
+
+    Différence clé avec 100001 :
+      → 100001 corrèle par IP  (attaque réseau SSH depuis l'extérieur)
+      → 100003 corrèle par USER (tentative d'escalade locale via sudo/su)
+
+    On utilise if_matched_group plutôt que if_matched_sid parce que :
+      - Le group "authentication_failed" regroupe toutes les règles d'échec
+        d'auth (PAM, sudo, su, login...) quelle que soit la version Wazuh
+      - Plus robuste qu'un ID de règle qui peut varier selon la version
+
+    Ce que ça détecte concrètement :
+      Un attaquant déjà sur la machine essaie sudo avec de mauvais MDP
+      en boucle → indique une tentative d'escalade de privilèges.
+
+    Champs clés :
+      if_matched_group = surveille toutes les règles du groupe "authentication_failed"
+      same_source_user = corrélation par nom d'utilisateur (pas par IP)
+
+    Script associé : attacks/05_privilege_escalation.sh
+    ───────────────────────────────────────────────────────────────
+  -->
+  <rule id="100003" level="12" frequency="5" timeframe="60">
+    <if_matched_group>authentication_failed</if_matched_group>
+    <same_source_user />
+    <description>SOC Lab — 5 échecs d'authentification en 60s pour le même utilisateur (possible escalade locale)</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>privilege_escalation,authentication_failures,</group>
+  </rule>
+
+</group>
