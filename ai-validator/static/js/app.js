@@ -59,6 +59,23 @@ function updateLastRefreshed() {
   if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString();
 }
 
+function updateWazuhStatus(source, hasAlerts) {
+  const dot  = document.getElementById('wazuh-dot');
+  const text = document.getElementById('wazuh-status-text');
+  if (!dot || !text) return;
+
+  if (source === 'opensearch' && hasAlerts) {
+    dot.className = 'status-dot connected';
+    text.textContent = 'Wazuh connected';
+  } else if (source === 'manager_logs' || source === 'opensearch') {
+    dot.className = 'status-dot partial';
+    text.textContent = 'Wazuh partial';
+  } else {
+    dot.className = 'status-dot disconnected';
+    text.textContent = 'Wazuh offline';
+  }
+}
+
 async function importFromWazuh() {
   const section = document.getElementById('wazuh-alerts-section');
   const list = document.getElementById('wazuh-alerts-list');
@@ -71,14 +88,17 @@ async function importFromWazuh() {
 
     if (!d.alerts || d.alerts.length === 0) {
       list.innerHTML = '<div class="wazuh-alert-item"><span class="alert-meta">No alerts found</span></div>';
+      updateWazuhStatus(d.source, false);
       return;
     }
 
     renderAlerts(d.alerts, d.source);
     updateLastRefreshed();
+    updateWazuhStatus(d.source, true);
 
   } catch(e) {
     list.innerHTML = '<div class="wazuh-alert-item"><span class="alert-meta" style="color:var(--red)">Cannot connect to Wazuh</span></div>';
+    updateWazuhStatus(null, false);
   }
 }
 
@@ -178,7 +198,7 @@ async function analyzeReport() {
 
     const pushBtn = document.getElementById('github-push-btn');
     const pushStatus = document.getElementById('github-push-status');
-    if (pushBtn) { pushBtn.disabled = false; }
+    if (pushBtn) { pushBtn.disabled = false; pushBtn.style.display = 'block'; }
     if (pushStatus) { pushStatus.style.display = 'none'; pushStatus.textContent = ''; }
 
     renderFeedback(d.feedback);
@@ -285,7 +305,7 @@ async function pushReport() {
   btn.disabled = true;
   statusEl.style.display = 'block';
   statusEl.className = '';
-  statusEl.textContent = 'Push en cours...';
+  statusEl.textContent = 'Pushing to GitHub...';
 
   const date = new Date().toISOString().substring(0, 10);
   const scenarioSlug = lastReport.attack_type.replace(/_/g, '-');
@@ -327,15 +347,15 @@ ${lastReport.feedback}
 
     if (d.success) {
       statusEl.className = 'github-success';
-      statusEl.innerHTML = `Rapport enregistré : <a href="${d.url}" target="_blank" style="color:inherit">${filename}.md</a>`;
+      statusEl.innerHTML = `Report saved: <a href="${d.url}" target="_blank" style="color:inherit">${filename}.md</a>`;
     } else {
       statusEl.className = 'github-error';
-      statusEl.textContent = `Erreur : ${d.error}`;
+      statusEl.textContent = `Error: ${d.error}`;
       btn.disabled = false;
     }
   } catch (e) {
     statusEl.className = 'github-error';
-    statusEl.textContent = 'Erreur réseau lors du push GitHub.';
+    statusEl.textContent = 'Network error while pushing to GitHub.';
     btn.disabled = false;
   }
 }

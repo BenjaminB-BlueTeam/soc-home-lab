@@ -1,5 +1,53 @@
 [
   {
+    "id": "WZ-20260316-153721",
+    "date": "2026-03-16 15:37",
+    "attack_type": "ssh_brute_force",
+    "verdict": "True Positive",
+    "score": 72,
+    "report": "Alert ID: 1773670287.1345528\nDate/Time: 2026-03-16 15:11:27\nSource IP: 192.168.56.101 (Kali-Attacker)\nDestination IP: 192.168.56.103 (wazuh-server)\nRule triggered: Maximum authentication attempts exce..."
+  },
+  {
+    "id": "WZ-20260316-153303",
+    "date": "2026-03-16 15:33",
+    "attack_type": "port_scan",
+    "verdict": "True Positive",
+    "score": 52,
+    "report": "Alert ID: 1773670415.1592110\nDate/Time: 2026-03-16 14:13:35\nSource IP: 192.168.56.101\nDest IP: 192.168.56.103\nAgent: wazuh-server\nRule triggered: Maximum authentication attempts exceeded.\nRule level: ..."
+  },
+  {
+    "id": "WZ-20260316-025651",
+    "date": "2026-03-16 02:56",
+    "attack_type": "port_scan",
+    "verdict": "Cannot Determine (Template Not Filled)",
+    "score": 4,
+    "report": "Alert ID: [WZ-XXXX]\nDate/Time: [YYYY-MM-DD HH:MM:SS]\nSource IP: [X.X.X.X]\nDestination IP: [X.X.X.X]\nRule triggered: Nmap port scan detected\nSeverity: Medium\n\n## What I observed\n[Describe the scan patt..."
+  },
+  {
+    "id": "WZ-20260316-025306",
+    "date": "2026-03-16 02:53",
+    "attack_type": "port_scan",
+    "verdict": "Cannot Determine (Template Not Completed)",
+    "score": 4,
+    "report": "Alert ID: [WZ-XXXX]\nDate/Time: [YYYY-MM-DD HH:MM:SS]\nSource IP: [X.X.X.X]\nDestination IP: [X.X.X.X]\nRule triggered: Nmap port scan detected\nSeverity: Medium\n\n## What I observed\n[Describe the scan patt..."
+  },
+  {
+    "id": "WZ-20260316-024958",
+    "date": "2026-03-16 02:49",
+    "attack_type": "port_scan",
+    "verdict": "Cannot Be Determined (Template Submitted \u2014 No Real Investigation Performed)",
+    "score": 4,
+    "report": "Alert ID: [WZ-XXXX]\nDate/Time: [YYYY-MM-DD HH:MM:SS]\nSource IP: [X.X.X.X]\nDestination IP: [X.X.X.X]\nRule triggered: Nmap port scan detected\nSeverity: Medium\n\n## What I observed\n[Describe the scan patt..."
+  },
+  {
+    "id": "WZ-20260316-024533",
+    "date": "2026-03-16 02:45",
+    "attack_type": "port_scan",
+    "verdict": "Cannot Be Determined (Template Not Filled)",
+    "score": 4,
+    "report": "Alert ID: [WZ-XXXX]\nDate/Time: [YYYY-MM-DD HH:MM:SS]\nSource IP: [X.X.X.X]\nDestination IP: [X.X.X.X]\nRule triggered: Nmap port scan detected\nSeverity: Medium\n\n## What I observed\n[Describe the scan patt..."
+  },
+  {
     "id": "WZ-20260314-140050",
     "date": "2026-03-14 14:00",
     "attack_type": "port_scan",
