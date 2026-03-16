@@ -5,6 +5,10 @@
 
 ---
 
+> **Work in Progress** — This project is still actively being built, far from finished and definitely not perfect. I'm in a career transition into cybersecurity, learning something new every day. This lab is both my training ground and my portfolio: a way to practice real SOC workflows hands-on, make mistakes, figure out why things break, and slowly get better at it. If you spot something wrong or have a suggestion, feel free to open an issue — feedback is always welcome. Thanks for taking the time to look at it.
+
+---
+
 ## Objective
 
 Practice real SOC analyst workflows: detect attacks with Wazuh, investigate alerts, write investigation reports, and get instant AI feedback scored out of 100. Designed to build and demonstrate blue team skills for a junior analyst CV.
@@ -219,18 +223,6 @@ Installed at `~/AtomicRedTeam/` on Kali. PowerShell 7.5.4 required:
 Import-Module ~/AtomicRedTeam/invoke-atomicredteam/Invoke-AtomicRedTeam.psd1
 Invoke-AtomicTest T1082
 ```
-
----
-
-## Work in Progress
-
-This project is still actively being built — it's far from finished and definitely not perfect, and that's kind of the point.
-
-I'm in a career transition into cybersecurity, learning something new every day. This lab is both my training ground and my portfolio: a way to practice real SOC workflows hands-on, make mistakes, figure out why things break, and slowly get better at it.
-
-If you're browsing this repo and spot something wrong, something missing, or just have a suggestion — feel free to open an issue or reach out. Feedback is always welcome.
-
-Thanks for taking the time to look at it.
 
 ---
 
