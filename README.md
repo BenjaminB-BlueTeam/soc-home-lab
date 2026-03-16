@@ -91,6 +91,8 @@ Submit a report and get:
 ### Push reports to GitHub
 After scoring, push the investigation report directly to the `investigations/` folder on GitHub in one click. The report is saved as a formatted Markdown file with score, verdict, and AI feedback — ready to share with a recruiter.
 
+![AI Validator](docs/screenshots/validator.png)
+
 ---
 
 ## AI Provider
@@ -111,8 +113,8 @@ Your API key is saved locally in `ai-validator/.env` only. It is never shared or
 | Scenario | MITRE ATT&CK | Detection | Status |
 |---|---|---|---|
 | Network reconnaissance | T1046 | Wazuh: "Listened ports status changed" | Tested ✅ |
-| SSH brute force | T1110 | Wazuh rule 5758 + custom 100001 (level 12) | Tested ✅ |
-| System info discovery | T1082 | Atomic Red Team test | Tested ✅ |
+| SSH brute force | T1110 | Wazuh rule 5710/5712 + custom 100001 (level 12) | Tested ✅ |
+| System info discovery | T1082 | Suricata (Nmap -A aggressive) | Tested ✅ |
 | User creation | T1136.001 | Wazuh custom rule 100002 (level 14) | Scripted |
 | Privilege escalation | T1548.003 | Wazuh custom rule 100003 (level 12) | Scripted |
 | Persistence (crontab) | T1053.003 | Wazuh syscheck | Scripted |
@@ -157,6 +159,7 @@ Each scenario has a matching report template in the AI Validator (selectable via
 
 ```
 soc-home-lab/
+├── config.ini                  # VM names and Wazuh IP for VirtualBox automation
 ├── attacks/                    # Attack scripts to run from Kali
 ├── docs/                       # Architecture, config, incident response playbooks
 ├── wazuh-rules/                # Custom detection rules (XML, MITRE-mapped)
