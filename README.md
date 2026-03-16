@@ -222,6 +222,18 @@ Invoke-AtomicTest T1082
 
 ---
 
+## Work in Progress
+
+This project is still actively being built — it's far from finished and definitely not perfect, and that's kind of the point.
+
+I'm in a career transition into cybersecurity, learning something new every day. This lab is both my training ground and my portfolio: a way to practice real SOC workflows hands-on, make mistakes, figure out why things break, and slowly get better at it.
+
+If you're browsing this repo and spot something wrong, something missing, or just have a suggestion — feel free to open an issue or reach out. Feedback is always welcome.
+
+Thanks for taking the time to look at it.
+
+---
+
 ## License
 
 MIT — free to use, fork, and adapt for learning purposes.
