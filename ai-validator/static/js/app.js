@@ -1,5 +1,6 @@
 let currentAttack = 'port_scan';
 let currentSev = 'medium';
+let lastReport = null; // stores { report, feedback, score, verdict, attack_type } after scoring
 
 async function loadTemplate(type) {
   const r = await fetch(`/api/template/${type}`);
@@ -167,6 +168,19 @@ async function analyzeReport() {
       document.getElementById('confidence-text').textContent = `Confidence: ${confMatch[1].trim()}`;
     }
 
+    lastReport = {
+      report: report,
+      feedback: d.feedback,
+      score: d.score,
+      verdict: d.verdict,
+      attack_type: currentAttack,
+    };
+
+    const pushBtn = document.getElementById('github-push-btn');
+    const pushStatus = document.getElementById('github-push-status');
+    if (pushBtn) { pushBtn.disabled = false; }
+    if (pushStatus) { pushStatus.style.display = 'none'; pushStatus.textContent = ''; }
+
     renderFeedback(d.feedback);
     loadHistory();
 
@@ -261,6 +275,69 @@ function switchTab(tab) {
     c.classList.toggle('active', i === (tab === 'feedback' ? 0 : 1));
   });
   if (tab === 'history') loadHistory();
+}
+
+async function pushReport() {
+  if (!lastReport) return;
+
+  const btn = document.getElementById('github-push-btn');
+  const statusEl = document.getElementById('github-push-status');
+  btn.disabled = true;
+  statusEl.style.display = 'block';
+  statusEl.className = '';
+  statusEl.textContent = 'Push en cours...';
+
+  const date = new Date().toISOString().substring(0, 10);
+  const scenarioSlug = lastReport.attack_type.replace(/_/g, '-');
+  const verdictSlug = lastReport.verdict.toLowerCase().includes('true') ? 'TP' : 'FP';
+  const filename = `${date}_${scenarioSlug}_${verdictSlug}`;
+
+  const attackLabel = lastReport.attack_type.replace(/_/g, ' ');
+  const content = `# Investigation Report — ${attackLabel}
+
+**Date :** ${date}
+**Scénario :** ${attackLabel}
+**Verdict :** ${lastReport.verdict}
+**Score AI :** ${lastReport.score}/100
+
+---
+
+## Rapport
+
+${lastReport.report}
+
+---
+
+## Feedback AI
+
+${lastReport.feedback}
+
+---
+
+*Généré automatiquement via AI Validator — SOC Home Lab*
+`;
+
+  try {
+    const r = await fetch('/push-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, content }),
+    });
+    const d = await r.json();
+
+    if (d.success) {
+      statusEl.className = 'github-success';
+      statusEl.innerHTML = `Rapport enregistré : <a href="${d.url}" target="_blank" style="color:inherit">${filename}.md</a>`;
+    } else {
+      statusEl.className = 'github-error';
+      statusEl.textContent = `Erreur : ${d.error}`;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    statusEl.className = 'github-error';
+    statusEl.textContent = 'Erreur réseau lors du push GitHub.';
+    btn.disabled = false;
+  }
 }
 
 // Init

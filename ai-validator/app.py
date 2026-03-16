@@ -526,5 +526,54 @@ def info():
 def history():
     return jsonify({"history": load_history()})
 
+@app.route("/push-report", methods=["POST"])
+def push_report():
+    data = request.json
+    filename = data.get("filename", "").strip()
+    content = data.get("content", "").strip()
+
+    if not filename or not content:
+        return jsonify({"success": False, "error": "filename and content are required"}), 400
+
+    github_token = os.getenv("GITHUB_TOKEN", "")
+    github_repo = os.getenv("GITHUB_REPO", "")
+
+    if not github_token or not github_repo:
+        return jsonify({"success": False, "error": "GITHUB_TOKEN or GITHUB_REPO not configured in .env"}), 500
+
+    if not filename.endswith(".md"):
+        filename += ".md"
+
+    path = f"investigations/{filename}"
+    api_url = f"https://api.github.com/repos/{github_repo}/contents/{path}"
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github+json",
+    }
+
+    import base64
+    encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+    # Check if file already exists (to get its sha for update)
+    sha = None
+    check = requests.get(api_url, headers=headers)
+    if check.status_code == 200:
+        sha = check.json().get("sha")
+
+    payload = {
+        "message": f"Add investigation report: {filename}",
+        "content": encoded,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    resp = requests.put(api_url, headers=headers, json=payload)
+
+    if resp.status_code in (200, 201):
+        html_url = resp.json().get("content", {}).get("html_url", "")
+        return jsonify({"success": True, "url": html_url})
+    else:
+        return jsonify({"success": False, "error": resp.json().get("message", "GitHub API error")}), resp.status_code
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
